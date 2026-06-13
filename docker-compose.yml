@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: rapkeo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rapkeo
+      POSTGRES_PASSWORD: rapkeo
+      POSTGRES_DB: rapkeo
+    ports:
+      - "5433:5432"
+    volumes:
+      - rapkeo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rapkeo -d rapkeo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rapkeo-pgdata:

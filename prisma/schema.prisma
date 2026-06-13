@@ -1,0 +1,208 @@
+// Ráp Kèo — Prisma schema (theo docs/ERD.md)
+// DB: PostgreSQL + PostGIS. Cột `location` dùng geography(Point, 4326).
+// Prisma chưa hỗ trợ kiểu geography -> dùng Unsupported(); query "gần" bằng raw SQL (ST_DWithin/ST_Distance).
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  // Image postgis/postgis tự bật sẵn các extension này; khai báo đủ để Prisma không báo drift.
+  // App chỉ thực sự dùng `postgis` (geography + ST_DWithin/ST_Distance).
+  extensions = [postgis, postgis_topology, postgis_tiger_geocoder, fuzzystrmatch]
+}
+
+// ---------- Enums ----------
+
+enum SkillTier {
+  FUN
+  AMATEUR
+  SEMI_PRO
+}
+
+// skill_tier của Match cho phép ANY (lọc mọi trình độ)
+enum MatchSkillTier {
+  FUN
+  AMATEUR
+  SEMI_PRO
+  ANY
+}
+
+enum FieldType {
+  F5
+  F7
+  F11
+}
+
+enum TeamRole {
+  OWNER
+  MEMBER
+}
+
+enum MatchType {
+  FIND_OPPONENT
+  NEED_PLAYERS
+  FIELD_AVAILABLE
+}
+
+enum MatchStatus {
+  OPEN
+  MATCHED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum MatchRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  MATCH_REQUEST
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  MATCH_CONFIRMED
+}
+
+// ---------- Models ----------
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String   @unique
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ownedTeams      Team[]         @relation("TeamOwner")
+  teamMemberships TeamMember[]
+  ownedFields     Field[]
+  createdMatches  Match[]
+  matchRequests   MatchRequest[]
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+model Team {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  ownerId   String    @map("owner_id") @db.Uuid
+  skillTier SkillTier @map("skill_tier")
+  homeArea  String?   @map("home_area")
+  // geography(Point, 4326) — gán/đọc qua raw SQL
+  location  Unsupported("geography(Point, 4326)")?
+  logoUrl   String?   @map("logo_url")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  owner            User           @relation("TeamOwner", fields: [ownerId], references: [id])
+  members          TeamMember[]
+  matches          Match[]
+  requestsFromTeam MatchRequest[]
+
+  @@index([ownerId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  teamId   String   @map("team_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model Field {
+  id         String                                @id @default(uuid()) @db.Uuid
+  name       String
+  address    String
+  location   Unsupported("geography(Point, 4326)")
+  fieldTypes FieldType[]                           @map("field_types")
+  ownerId    String?                               @map("owner_id") @db.Uuid
+  phone      String?
+  createdAt  DateTime                              @default(now()) @map("created_at")
+  updatedAt  DateTime                              @updatedAt @map("updated_at")
+
+  owner   User?   @relation(fields: [ownerId], references: [id])
+  matches Match[]
+
+  @@map("fields")
+}
+
+model Match {
+  id          String                                 @id @default(uuid()) @db.Uuid
+  creatorId   String                                 @map("creator_id") @db.Uuid
+  teamId      String?                                @map("team_id") @db.Uuid
+  matchType   MatchType                              @map("match_type")
+  fieldType   FieldType                              @map("field_type")
+  skillTier   MatchSkillTier                         @map("skill_tier")
+  fieldId     String?                                @map("field_id") @db.Uuid
+  area        String?
+  location    Unsupported("geography(Point, 4326)")?
+  playTime    DateTime                               @map("play_time")
+  costPerSide Int?                                   @map("cost_per_side")
+  note        String?
+  status      MatchStatus                            @default(OPEN)
+  createdAt   DateTime                               @default(now()) @map("created_at")
+  updatedAt   DateTime                               @updatedAt @map("updated_at")
+
+  creator  User           @relation(fields: [creatorId], references: [id])
+  team     Team?          @relation(fields: [teamId], references: [id])
+  field    Field?         @relation(fields: [fieldId], references: [id])
+  requests MatchRequest[]
+
+  @@index([creatorId])
+  @@index([teamId])
+  @@index([fieldId])
+  // lọc kèo OPEN sắp tới
+  @@index([status, playTime])
+  @@map("matches")
+}
+
+model MatchRequest {
+  id              String             @id @default(uuid()) @db.Uuid
+  matchId         String             @map("match_id") @db.Uuid
+  requesterId     String             @map("requester_id") @db.Uuid
+  requesterTeamId String?            @map("requester_team_id") @db.Uuid
+  status          MatchRequestStatus @default(PENDING)
+  message         String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  match         Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  requester     User  @relation(fields: [requesterId], references: [id])
+  requesterTeam Team? @relation(fields: [requesterTeamId], references: [id])
+
+  @@index([matchId])
+  @@index([requesterId])
+  @@map("match_requests")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  payload   Json
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
