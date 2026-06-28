@@ -71,12 +71,21 @@ enum NotificationType {
   MATCH_CONFIRMED
 }
 
+// Kênh gửi OTP. Hiện dùng EMAIL; PHONE dành cho đăng nhập SĐT sau này.
+enum OtpChannel {
+  EMAIL
+  PHONE
+}
+
 // ---------- Models ----------
 
 model User {
   id        String   @id @default(uuid()) @db.Uuid
-  phone     String   @unique
-  name      String
+  // Đăng nhập đa phương thức: user có thể có email hoặc phone (ít nhất một).
+  phone     String?  @unique
+  email     String?  @unique
+  // name nullable: cho user nhập sau khi đăng nhập lần đầu (onboarding).
+  name      String?
   avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -205,4 +214,21 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// Mã OTP đăng nhập (đa kênh). Mã được hash trước khi lưu (không lưu plaintext).
+model OtpCode {
+  id          String     @id @default(uuid()) @db.Uuid
+  channel     OtpChannel
+  // destination: email (đã chuẩn hoá lowercase) hoặc số điện thoại (E.164).
+  destination String
+  codeHash    String     @map("code_hash")
+  expiresAt   DateTime   @map("expires_at")
+  attempts    Int        @default(0)
+  consumedAt  DateTime?  @map("consumed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  // tra cứu mã mới nhất theo đích đến + rate-limit theo thời gian
+  @@index([destination, channel, createdAt])
+  @@map("otp_codes")
 }

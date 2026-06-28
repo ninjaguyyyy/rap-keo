@@ -6,10 +6,23 @@
 
 ### User
 - id (uuid, pk)
-- phone (string, unique)        -- đăng nhập OTP
-- name (string)
+- phone (string, unique, **nullable**)   -- đăng nhập OTP qua SĐT (có thể trống nếu đăng nhập bằng email/OAuth)
+- email (string, unique, nullable)        -- đăng nhập OTP qua email
+- name (string, **nullable**)             -- cho nhập sau khi đăng nhập lần đầu (onboarding)
 - avatar_url (string, nullable)
 - created_at, updated_at
+- *Ràng buộc nghiệp vụ:* mỗi user có ít nhất một định danh (email hoặc phone).
+
+### OtpCode (Mã OTP đăng nhập)
+- id (uuid, pk)
+- channel (enum: EMAIL, PHONE)            -- hiện dùng EMAIL; PHONE dành cho sau
+- destination (string)                    -- email (lowercase) hoặc phone (E.164)
+- code_hash (string)                      -- OTP được hash, KHÔNG lưu plaintext
+- expires_at (timestamp)                  -- hết hạn (mặc định 5 phút)
+- attempts (int, default 0)               -- số lần thử sai, khoá sau ngưỡng
+- consumed_at (timestamp, nullable)       -- thời điểm mã được dùng thành công
+- created_at
+- index(destination, channel, created_at) -- tra mã mới nhất + rate-limit
 
 ### Team
 - id (uuid, pk)

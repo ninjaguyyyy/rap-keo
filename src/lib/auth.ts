@@ -1,38 +1,38 @@
-// NextAuth v5 (Auth.js) base config.
-// Đăng nhập bằng số điện thoại + OTP qua Credentials provider.
-// LƯU Ý: phần xác thực OTP thật sẽ implement ở task "Auth OTP" (bước 3 MVP).
-// File này chỉ dựng khung để app compile và sẵn sàng cắm logic.
+// NextAuth v5 (Auth.js) — config đầy đủ (Node runtime).
+// Đăng nhập bằng email + OTP qua Credentials provider.
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { authConfig } from "@/auth.config";
+import { db } from "@/lib/db";
+import { verifyOtp } from "@/features/auth/otp";
+import { verifyOtpSchema } from "@/features/auth/schemas";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Credentials provider không dùng DB session -> chiến lược JWT.
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
+  ...authConfig,
   providers: [
     Credentials({
-      name: "phone-otp",
+      name: "email-otp",
       credentials: {
-        phone: { label: "Số điện thoại", type: "tel" },
+        email: { label: "Email", type: "email" },
         otp: { label: "Mã OTP", type: "text" },
       },
-      // TODO(auth task): verify OTP, tìm/tạo User, trả về { id, name, phone }.
-      authorize: async () => {
-        return null;
+      authorize: async (credentials) => {
+        const parsed = verifyOtpSchema.safeParse(credentials);
+        if (!parsed.success) return null;
+
+        const { email, otp } = parsed.data;
+        const result = await verifyOtp(email, "EMAIL", otp);
+        if (!result.ok) return null;
+
+        // Find-or-create user theo email. name để trống cho onboarding sau.
+        const user = await db.user.upsert({
+          where: { email },
+          create: { email },
+          update: {},
+        });
+
+        return { id: user.id, email: user.email, name: user.name };
       },
     }),
   ],
-  callbacks: {
-    // Gắn user.id vào token & session để dùng ở server.
-    async jwt({ token, user }) {
-      if (user) token.sub = user.id;
-      return token;
-    },
-    async session({ session, token }) {
-      if (token.sub && session.user) session.user.id = token.sub;
-      return session;
-    },
-  },
 });
