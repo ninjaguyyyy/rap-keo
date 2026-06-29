@@ -28,7 +28,8 @@
 - id (uuid, pk)
 - name (string)
 - owner_id (fk -> User.id)      -- đội trưởng
-- skill_tier (enum: FUN, AMATEUR, SEMI_PRO)
+- skill_tier (enum 7 mức yếu→mạnh: VERY_WEAK, WEAK, BELOW_AVERAGE, AVERAGE, ABOVE_AVERAGE, GOOD, STRONG)
+  -- Hiển thị: Siêu Yếu, Yếu, Trung Bình Yếu, Trung Bình, Trung Bình Khá, Khá, Mạnh
 - home_area (string, nullable)  -- khu vực hoạt động
 - location (geography Point, nullable)
 - logo_url (string, nullable)
@@ -58,7 +59,7 @@
 - team_id (fk -> Team.id, nullable)       -- đội tạo kèo
 - match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE)
 - field_type (enum: F5, F7, F11)
-- skill_tier (enum: FUN, AMATEUR, SEMI_PRO, ANY)
+- skill_tier (enum: 7 mức như Team + ANY = mọi trình độ)
 - field_id (fk -> Field.id, nullable)     -- sân cụ thể nếu đã có
 - area (string, nullable)                 -- khu vực mong muốn
 - location (geography Point, nullable)     -- để filter "gần"
