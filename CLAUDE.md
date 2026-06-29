@@ -32,6 +32,7 @@
 - Làm theo **task nhỏ**, từng feature một. Không làm cả app một lần.
 - Sau khi code: chạy lint + typecheck + test, tự sửa lỗi.
 - Commit theo từng feature hoàn chỉnh, message rõ ràng.
+- **Commit message LUÔN viết bằng tiếng Anh** (kể cả body), dù trao đổi với người dùng bằng tiếng Việt.
 - Khi đụng tới schema DB: đối chiếu `docs/ERD.md`, không tự ý đổi cấu trúc khi chưa hỏi.
 
 ## Thứ tự build MVP
