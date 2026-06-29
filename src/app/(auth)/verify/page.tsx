@@ -13,14 +13,14 @@ export default async function VerifyPage({
 
   return (
     <div>
-      <h2 className="mb-1 text-xl font-bold text-gray-900">Nhập mã OTP</h2>
-      <p className="mb-6 text-sm text-gray-500">
+      <h2 className="mb-1 text-xl font-bold text-ink">Nhập mã OTP</h2>
+      <p className="mb-6 text-sm text-ink-muted">
         Kiểm tra hộp thư để lấy mã đăng nhập.
       </p>
       <OtpForm email={email} />
       <Link
         href="/login"
-        className="mt-4 block text-center text-sm text-green-700 underline"
+        className="mt-4 block text-center text-sm text-brand underline"
       >
         Dùng email khác
       </Link>

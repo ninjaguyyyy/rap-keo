@@ -10,10 +10,10 @@ export default async function MainLayout({
   const user = await getCurrentUser();
 
   return (
-    <div className="min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+    <div className="min-h-dvh bg-surface-muted">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <span className="text-lg font-extrabold text-green-700">Ráp Kèo</span>
+          <span className="text-lg font-extrabold text-brand">Ráp Kèo</span>
           <form
             action={async () => {
               "use server";
@@ -22,7 +22,7 @@ export default async function MainLayout({
           >
             <button
               type="submit"
-              className="text-sm font-medium text-gray-500 hover:text-red-600"
+              className="text-sm font-medium text-ink-muted hover:text-danger"
               title={user?.email ?? undefined}
             >
               Đăng xuất

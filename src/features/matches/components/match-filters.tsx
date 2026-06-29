@@ -2,14 +2,53 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   fieldTypeLabels,
   matchTypeLabels,
   skillTierLabels,
   timeSlotLabels,
 } from "../labels";
 
-const selectClass =
-  "rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-green-600";
+const ALL = "all";
+
+function FilterSelect({
+  paramKey,
+  allLabel,
+  options,
+  value,
+  onChange,
+}: {
+  paramKey: string;
+  allLabel: string;
+  options: Record<string, string>;
+  value: string;
+  onChange: (key: string, value: string) => void;
+}) {
+  return (
+    <Select
+      value={value || ALL}
+      onValueChange={(v) => onChange(paramKey, v === ALL ? "" : String(v))}
+    >
+      <SelectTrigger className="h-10 w-auto">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>{allLabel}</SelectItem>
+        {Object.entries(options).map(([val, label]) => (
+          <SelectItem key={val} value={val}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export function MatchFilters() {
   const router = useRouter();
@@ -27,61 +66,34 @@ export function MatchFilters() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <select
-        aria-label="Loại kèo"
-        className={selectClass}
+      <FilterSelect
+        paramKey="matchType"
+        allLabel="Mọi loại kèo"
+        options={matchTypeLabels}
         value={searchParams.get("matchType") ?? ""}
-        onChange={(e) => setParam("matchType", e.target.value)}
-      >
-        <option value="">Mọi loại kèo</option>
-        {Object.entries(matchTypeLabels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-
-      <select
-        aria-label="Loại sân"
-        className={selectClass}
+        onChange={setParam}
+      />
+      <FilterSelect
+        paramKey="fieldType"
+        allLabel="Mọi loại sân"
+        options={fieldTypeLabels}
         value={searchParams.get("fieldType") ?? ""}
-        onChange={(e) => setParam("fieldType", e.target.value)}
-      >
-        <option value="">Mọi loại sân</option>
-        {Object.entries(fieldTypeLabels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-
-      <select
-        aria-label="Trình độ"
-        className={selectClass}
+        onChange={setParam}
+      />
+      <FilterSelect
+        paramKey="skillTier"
+        allLabel="Mọi trình độ"
+        options={skillTierLabels}
         value={searchParams.get("skillTier") ?? ""}
-        onChange={(e) => setParam("skillTier", e.target.value)}
-      >
-        <option value="">Mọi trình độ</option>
-        {Object.entries(skillTierLabels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-
-      <select
-        aria-label="Khung giờ"
-        className={selectClass}
+        onChange={setParam}
+      />
+      <FilterSelect
+        paramKey="timeSlot"
+        allLabel="Mọi khung giờ"
+        options={timeSlotLabels}
         value={searchParams.get("timeSlot") ?? ""}
-        onChange={(e) => setParam("timeSlot", e.target.value)}
-      >
-        <option value="">Mọi khung giờ</option>
-        {Object.entries(timeSlotLabels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
+        onChange={setParam}
+      />
     </div>
   );
 }

@@ -20,8 +20,8 @@ export default async function MatchesPage({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Kèo đang mở</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-ink">Kèo đang mở</h1>
+        <p className="text-sm text-ink-muted">
           {matches.length} kèo sắp diễn ra
         </p>
       </div>
@@ -29,7 +29,7 @@ export default async function MatchesPage({
       <MatchFilters />
 
       {matches.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+        <div className="rounded-xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-muted">
           Chưa có kèo nào phù hợp. Thử bỏ bớt bộ lọc nhé.
         </div>
       ) : (

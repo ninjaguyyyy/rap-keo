@@ -2,6 +2,9 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { requestEmailOtp, type RequestOtpState } from "../actions";
 
 const initialState: RequestOtpState = {};
@@ -22,10 +25,8 @@ export function EmailLoginForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium text-gray-700">
-          Email
-        </label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           name="email"
           type="email"
@@ -33,21 +34,17 @@ export function EmailLoginForm() {
           autoComplete="email"
           required
           placeholder="ban@email.com"
-          className="rounded-xl border border-gray-300 px-4 py-3 text-base outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20"
+          className="h-11 text-base"
         />
       </div>
 
       {state.error ? (
-        <p className="text-sm text-red-600">{state.error}</p>
+        <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-green-600 px-4 py-3 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="h-11 w-full text-base">
         {pending ? "Đang gửi mã..." : "Gửi mã đăng nhập"}
-      </button>
+      </Button>
     </form>
   );
 }

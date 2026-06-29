@@ -1,6 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { verifyEmailOtp, type VerifyOtpState } from "../actions";
 
 const initialState: VerifyOtpState = {};
@@ -16,10 +19,8 @@ export function OtpForm({ email }: { email: string }) {
       <input type="hidden" name="email" value={email} />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="otp" className="text-sm font-medium text-gray-700">
-          Mã OTP
-        </label>
-        <input
+        <Label htmlFor="otp">Mã OTP</Label>
+        <Input
           id="otp"
           name="otp"
           type="text"
@@ -28,24 +29,20 @@ export function OtpForm({ email }: { email: string }) {
           maxLength={6}
           required
           placeholder="______"
-          className="rounded-xl border border-gray-300 px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20"
+          className="h-12 text-center text-2xl tracking-[0.5em]"
         />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Mã gồm 6 chữ số đã gửi tới <span className="font-medium">{email}</span>
         </p>
       </div>
 
       {state.error ? (
-        <p className="text-sm text-red-600">{state.error}</p>
+        <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-green-600 px-4 py-3 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="h-11 w-full text-base">
         {pending ? "Đang xác thực..." : "Xác nhận"}
-      </button>
+      </Button>
     </form>
   );
 }

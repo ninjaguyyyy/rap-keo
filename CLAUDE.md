@@ -23,6 +23,9 @@
 - Đặt tên rõ ràng, tránh viết tắt khó hiểu.
 - Validate input ở server (dùng zod).
 - Không commit secret; dùng `.env` (có `.env.example`).
+- **Mọi UI phải tuân theo `DESIGN.md`** (design system, tông xanh cỏ, mobile-first). Dùng token màu/typography đã export sang `@theme` trong `globals.css` (class `bg-brand`, `text-ink`, `border-line`...). Không hardcode màu tuỳ tiện (vd `green-600`); theo Do's & Don'ts trong DESIGN.md.
+- **Dùng component shadcn/ui** (thư mục `src/components/ui/`) làm nền cho UI: Button, Input, Label, Card, Badge, Select... Thêm component mới bằng `npx shadcn@latest add <tên>`. KHÔNG tự viết lại `<button>/<input>` thuần khi đã có component shadcn. Biến semantic của shadcn (`--primary`, `--border`, `--ring`, `--destructive`...) đã được map sang palette brand trong `globals.css` nên component tự mang tông xanh cỏ.
+- Khi đổi token `@theme`/biến màu trong `globals.css`: nhớ `rm -rf .next` rồi chạy lại dev (Turbopack cache CSS cũ).
 
 ## Cách làm việc (quan trọng)
 - **Luôn lập plan trước khi code.** Đề xuất hướng làm, chờ tôi duyệt rồi mới code.
