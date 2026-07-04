@@ -14,9 +14,11 @@ export default async function MainLayout({
 
   return (
     <div className="min-h-dvh bg-surface-muted">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <span className="text-lg font-extrabold text-brand">Ráp Kèo</span>
+      {/* Header spotlight: tone xanh đậm broadcast + họa tiết hex (DESIGN.md "Spotlight surface").
+          Sticky top, dính trên cùng khi cuộn. Khung hẹp max-w-md (~448px) theo mock mobile-first. */}
+      <header className="spotlight hex-bg sticky top-0 z-10">
+        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
+          <span className="text-lg font-extrabold text-white">Ráp Kèo</span>
           {user ? (
             <form
               action={async () => {
@@ -26,7 +28,7 @@ export default async function MainLayout({
             >
               <button
                 type="submit"
-                className="text-sm font-medium text-ink-muted hover:text-danger"
+                className="text-sm font-medium text-white/80 hover:text-white"
                 title={user.email ?? undefined}
               >
                 Đăng xuất
@@ -35,7 +37,7 @@ export default async function MainLayout({
           ) : (
             <Link
               href="/login"
-              className="text-sm font-medium text-brand hover:text-brand-hover"
+              className="text-sm font-medium text-white hover:text-white/80"
             >
               Đăng nhập
             </Link>
@@ -43,7 +45,7 @@ export default async function MainLayout({
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-4">{children}</main>
+      <main className="mx-auto max-w-md px-4 py-4">{children}</main>
     </div>
   );
 }
