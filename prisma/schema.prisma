@@ -168,12 +168,13 @@ model Match {
   teamId      String?                                @map("team_id") @db.Uuid
   matchType   MatchType                              @map("match_type")
   fieldType   FieldType                              @map("field_type")
-  skillTier   MatchSkillTier                         @map("skill_tier")
+  // Mảng trình độ: kèo có thể mở cho nhiều trình độ cùng lúc (vd Khá + Mạnh).
+  skillTiers  MatchSkillTier[]                       @map("skill_tiers")
   fieldId     String?                                @map("field_id") @db.Uuid
   area        String?
   location    Unsupported("geography(Point, 4326)")?
-  playTime    DateTime                               @map("play_time")
-  costPerSide Int?                                   @map("cost_per_side")
+  // Mảng giờ đá: 1 kèo có thể mở nhiều giờ trong ngày (vd 18h30 + 20h30).
+  playTimes   DateTime[]                             @map("play_times")
   note        String?
   status      MatchStatus                            @default(OPEN)
   createdAt   DateTime                               @default(now()) @map("created_at")
@@ -187,8 +188,7 @@ model Match {
   @@index([creatorId])
   @@index([teamId])
   @@index([fieldId])
-  // lọc kèo OPEN sắp tới
-  @@index([status, playTime])
+  // lọc kèo OPEN có giờ sắp tới: query lọc trong app (array không dùng B-tree trực tiếp).
   @@map("matches")
 }
 

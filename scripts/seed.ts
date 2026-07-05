@@ -79,13 +79,16 @@ async function main() {
   });
 
   // --- Fields (location qua raw SQL) ---
-  const fieldCauGiay = await insertField({
+  // Gắn fieldMyDinh cho 1 kèo để test badge "Đã có sân". fieldCauGiay giữ lại
+  // làm data mẫu (chưa gắn vào kèo nào trong MVP này).
+  const _fieldCauGiay = await insertField({
     name: "Sân bóng Cầu Giấy",
     address: "Số 1 Trần Thái Tông, Cầu Giấy, Hà Nội",
     ...HANOI.cauGiay,
     fieldTypes: ["F5", "F7"],
     ownerId: user.id,
   });
+  void _fieldCauGiay;
   const fieldMyDinh = await insertField({
     name: "Sân Mỹ Đình",
     address: "Lê Đức Thọ, Mỹ Đình, Hà Nội",
@@ -95,6 +98,10 @@ async function main() {
   });
 
   // --- Matches ---
+  // Lưu ý: MVP form tạo kèo chỉ chọn `area` (4 sân cố định), không gắn fieldId
+  // cụ thể (field picker là task sau). Seed cũng không gắn fieldId cho kèo nào
+  // để card hiển thị "Chưa có sân" đúng ngữ nghĩa — trừ khi muốn test kèo đã có
+  // sân cụ thể (entity Field riêng).
   await db.match.createMany({
     data: [
       {
@@ -102,11 +109,10 @@ async function main() {
         teamId: team.id,
         matchType: "FIND_OPPONENT",
         fieldType: "F7",
-        skillTier: "ABOVE_AVERAGE",
-        fieldId: fieldCauGiay,
-        area: "Cầu Giấy",
-        playTime: vnDateTime(1, "18:30"),
-        costPerSide: 300000,
+        skillTiers: ["ABOVE_AVERAGE", "GOOD"],
+        area: "trung_tam",
+        // Nhiều giờ trong 1 ngày (18h30 + 20h30).
+        playTimes: [vnDateTime(1, "18:30"), vnDateTime(1, "20:30")],
         note: "Tìm đối giao hữu sân 7, fair-play.",
       },
       {
@@ -114,11 +120,9 @@ async function main() {
         teamId: team.id,
         matchType: "NEED_PLAYERS",
         fieldType: "F5",
-        skillTier: "WEAK",
-        fieldId: fieldCauGiay,
-        area: "Cầu Giấy",
-        playTime: vnDateTime(1, "20:30"),
-        costPerSide: 50000,
+        skillTiers: ["WEAK", "BELOW_AVERAGE"],
+        area: "da_phuoc",
+        playTimes: [vnDateTime(1, "20:30")],
         note: "Thiếu 2 người, anh em vào cho vui.",
       },
       {
@@ -126,11 +130,11 @@ async function main() {
         teamId: team.id,
         matchType: "FIELD_AVAILABLE",
         fieldType: "F11",
-        skillTier: "ANY",
+        skillTiers: ["ANY"],
+        // Kèo "có sân trống": gắn fieldId cụ thể để test hasField=true.
         fieldId: fieldMyDinh,
-        area: "Mỹ Đình",
-        playTime: vnDateTime(2, "16:30"),
-        costPerSide: 200000,
+        area: "chuyen_viet",
+        playTimes: [vnDateTime(2, "16:30")],
         note: "Đã đặt sân 11, cần rủ kèo chia tiền.",
       },
       {
@@ -138,9 +142,10 @@ async function main() {
         teamId: team.id,
         matchType: "FIND_OPPONENT",
         fieldType: "F7",
-        skillTier: "STRONG",
-        area: "Thanh Xuân",
-        playTime: vnDateTime(3, "08:30"),
+        skillTiers: ["STRONG", "GOOD"],
+        area: "hong_phuc",
+        // Sáng sớm: 2 slot 30 phút.
+        playTimes: [vnDateTime(3, "05:00"), vnDateTime(3, "06:30")],
         note: "Tìm đối trình mạnh, đá sáng cuối tuần.",
       },
     ],

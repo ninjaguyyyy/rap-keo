@@ -59,12 +59,11 @@
 - team_id (fk -> Team.id, nullable)       -- đội tạo kèo
 - match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE)
 - field_type (enum: F5, F7, F11)
-- skill_tier (enum: 7 mức như Team + ANY = mọi trình độ)
+- skill_tiers (array enum: 7 mức như Team + ANY = mọi trình độ)  -- kèo mở cho nhiều trình độ cùng lúc
 - field_id (fk -> Field.id, nullable)     -- sân cụ thể nếu đã có
 - area (string, nullable)                 -- khu vực mong muốn
 - location (geography Point, nullable)     -- để filter "gần"
-- play_time (timestamp)                   -- thời gian đá
-- cost_per_side (int, nullable)           -- chi phí chia sân (VND)
+- play_times (array timestamp)            -- thời gian đá (1 kèo có thể nhiều giờ trong ngày)
 - note (text, nullable)
 - status (enum: OPEN, MATCHED, CONFIRMED, COMPLETED, CANCELLED, EXPIRED)
 - created_at, updated_at
@@ -94,8 +93,9 @@
 
 ## Index quan trọng
 - Match.location: GIST index (PostGIS) cho query gần.
-- Match(status, play_time): lọc kèo OPEN sắp tới.
+- Match.skill_tiers: GIST/GIN index cho filter hasSome (task sau nếu cần).
+- Match.play_times: array — query "OPEN có giờ sắp tới" lọc trong app (MVP).
 - Field.location: GIST index.
 
 ## Logic hết hạn
-Job định kỳ chuyển Match `OPEN`/`MATCHED` có `play_time` đã qua sang `EXPIRED`.
+Job định kỳ chuyển Match `OPEN`/`MATCHED` có toàn bộ `play_times` đã qua sang `EXPIRED`.

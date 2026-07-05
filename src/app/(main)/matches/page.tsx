@@ -1,16 +1,17 @@
+import Link from "next/link";
 import { MatchCard } from "@/features/matches/components/match-card";
 import { MatchFilters } from "@/features/matches/components/match-filters";
 import { listMatches, parseMatchFilters } from "@/features/matches/queries";
 
-// Next 16: searchParams là Promise.
+// Next 16: searchParams là Promise. skillTier có thể lặp lại (?skillTier=A&skillTier=B).
 export default async function MatchesPage({
   searchParams,
 }: {
   searchParams: Promise<{
     matchType?: string;
     fieldType?: string;
-    skillTier?: string;
-    timeSlot?: string;
+    skillTier?: string | string[];
+    timeSlot?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -19,11 +20,34 @@ export default async function MatchesPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-bold text-ink">Kèo đang mở</h1>
-        <p className="text-sm text-ink-muted">
-          {matches.length} kèo sắp diễn ra
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-ink">Kèo đang mở</h1>
+          <p className="text-sm text-ink-muted">
+            {matches.length} kèo sắp diễn ra
+          </p>
+        </div>
+        {/* Nút tạo kèo — hành động chính màu brand, vùng chạm h-11 (DESIGN.md). */}
+        <Link
+          href="/matches/new"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Tạo kèo
+        </Link>
       </div>
 
       <MatchFilters />

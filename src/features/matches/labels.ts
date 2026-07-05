@@ -32,7 +32,10 @@ export const skillTierLabels: Record<MatchSkillTier, string> = {
 
 // Nhãn khung giờ (khớp key của TIME_SLOT_RANGES trong queries.ts).
 export const timeSlotLabels: Record<string, string> = {
-  morning: "Sáng",
+  "0500": "05h00",
+  "0530": "05h30",
+  "0600": "06h00",
+  "0630": "06h30",
   "1630": "16h30",
   "1730": "17h30",
   "1830": "18h30",
@@ -40,6 +43,20 @@ export const timeSlotLabels: Record<string, string> = {
   "2030": "20h30",
   "2130": "21h30",
 };
+
+// Khu vực / sân (MVP: cố định 4 sân phổ biến. Map + field picker để task sau).
+export const areaLabels: Record<string, string> = {
+  trung_tam: "Sân Trung Tâm",
+  da_phuoc: "Đa Phước",
+  chuyen_viet: "Chuyên Việt",
+  hong_phuc: "Hồng Phúc",
+};
+
+// Trạng thái "đã có sân" — hiển thị trên card.
+export const hasFieldLabels = {
+  true: "Đã có sân",
+  false: "Chưa có sân",
+} as const;
 
 export const matchStatusLabels: Record<MatchStatus, string> = {
   OPEN: "Đang mở",
@@ -64,7 +81,25 @@ export function formatPlayTime(date: Date): string {
   return playTimeFormatter.format(date);
 }
 
-// Định dạng chi phí (VND).
-export function formatCost(vnd: number): string {
-  return `${vnd.toLocaleString("vi-VN")}đ`;
+// Định dạng mảng giờ đá: gộp chung ngày nếu cùng ngày, VD "07/07 18h30 · 20h30".
+// Sort tăng dần theo thời gian trước khi format.
+const dayMonthFormatter = new Intl.DateTimeFormat("vi-VN", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+const hourMinuteFormatter = new Intl.DateTimeFormat("vi-VN", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
+export function formatPlayTimes(dates: Date[]): string {
+  const sorted = [...dates].sort((a, b) => a.getTime() - b.getTime());
+  if (sorted.length === 0) return "";
+  const first = sorted[0];
+  const dayLabel = dayMonthFormatter.format(first);
+  const hours = sorted.map((d) => hourMinuteFormatter.format(d)).join(" · ");
+  return `${dayLabel} ${hours}`;
 }

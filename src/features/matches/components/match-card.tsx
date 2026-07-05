@@ -2,9 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { MatchListItem } from "../queries";
 import {
+  areaLabels,
   fieldTypeLabels,
-  formatCost,
-  formatPlayTime,
+  formatPlayTimes,
   matchTypeLabels,
   skillTierLabels,
 } from "../labels";
@@ -41,6 +41,11 @@ function MapPinIcon({ className = "" }: { className?: string }) {
   );
 }
 
+// Ghép label nhiều trình độ thành 1 chuỗi: "Khá · Mạnh".
+function joinSkillTiers(tiers: MatchListItem["skillTiers"]): string {
+  return tiers.map((t) => skillTierLabels[t]).join(" · ");
+}
+
 export function MatchCard({ match }: { match: MatchListItem }) {
   const isLive = LIVE_STATUSES.has(match.status);
 
@@ -55,31 +60,36 @@ export function MatchCard({ match }: { match: MatchListItem }) {
             // Chip lime — cặp nền lime + chữ ink tối để đạt AA (DESIGN.md).
             <span className="inline-flex items-center gap-1 rounded-full bg-accent-lime px-2 py-0.5 text-xs font-bold text-accent-lime-ink">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-lime-ink" />
-              {formatPlayTime(match.playTime)}
+              {formatPlayTimes(match.playTimes)}
             </span>
           ) : (
-            <span className="text-lg font-bold text-ink">
-              {formatPlayTime(match.playTime)}
+            <span className="text-base font-bold text-ink">
+              {formatPlayTimes(match.playTimes)}
             </span>
           )}
         </div>
 
         <div className="flex flex-wrap gap-1.5 text-xs">
           <Badge variant="secondary">{fieldTypeLabels[match.fieldType]}</Badge>
-          <Badge variant="secondary">{skillTierLabels[match.skillTier]}</Badge>
-          {match.costPerSide != null ? (
-            <Badge variant="secondary">
-              {formatCost(match.costPerSide)}/đội
-            </Badge>
-          ) : null}
+          {/* 1 badge gộp các trình độ (mobile gọn) thay vì nhiều badge. */}
+          <Badge variant="secondary">{joinSkillTiers(match.skillTiers)}</Badge>
+          {/* Trạng thái sân: luôn hiện. hasField suy từ fieldId (có sân cụ thể) —
+              MVP chưa có cột hasField nên dùng fieldId làm proxy. */}
+          {match.fieldId ? (
+            <Badge className="bg-type-field-soft text-type-field">Đã có sân</Badge>
+          ) : (
+            <Badge variant="secondary">Chưa có sân</Badge>
+          )}
         </div>
 
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPinIcon className="shrink-0 text-brand" />
+          {/* Ưu tiên area label (khu vực user chọn) cho đồng nhất. Nếu kèo đã có
+              fieldId cụ thể, hiển thị thêm tên sân phụ. MVP area là 4 sân cố định. */}
           <span>
-            {match.field?.name ?? match.area ?? "Chưa có sân"}
-            {match.field?.address ? (
-              <span className="text-ink-subtle"> · {match.field.address}</span>
+            {areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có khu vực"}
+            {match.field?.name ? (
+              <span className="text-ink-subtle"> · {match.field.name}</span>
             ) : null}
           </span>
         </p>

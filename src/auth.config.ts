@@ -4,8 +4,10 @@ import type { NextAuthConfig } from "next-auth";
 
 // Các tiền tố route yêu cầu đăng nhập.
 // Lưu ý: /matches (danh sách kèo) là public — vào home thấy list kèo luôn,
-// không cần đăng nhập. Chỉ các thao tác "tạo/ghép kèo" (task sau) mới yêu cầu auth.
+// không cần đăng nhập. Chỉ các thao tác "tạo/ghép kèo" mới yêu cầu auth:
+// /matches/new (tạo kèo) được bảo vệ ở đây + guard thêm trong page.
 const PROTECTED_PREFIXES = [
+  "/matches/new",
   "/teams",
   "/fields",
   "/notifications",
