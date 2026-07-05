@@ -64,7 +64,7 @@ const TIME_SLOT_START: Record<TimeSlot, string> = {
   "2130": "21:30",
 };
 
-export function MatchForm() {
+export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState(
     createMatch,
     initialState,
@@ -110,9 +110,12 @@ export function MatchForm() {
 
   useEffect(() => {
     if (state.ok) {
-      router.push("/matches");
+      // Trong modal -> đóng modal (list tự refresh qua revalidatePath trong action).
+      // Dùng chỗ khác (không có onSuccess) -> fallback redirect về /matches.
+      if (onSuccess) onSuccess();
+      else router.push("/matches");
     }
-  }, [state, router]);
+  }, [state, router, onSuccess]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

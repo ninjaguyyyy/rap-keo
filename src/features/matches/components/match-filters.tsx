@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   fieldTypeLabels,
@@ -27,30 +28,36 @@ const ALL = "all";
 
 function FilterSelect({
   paramKey,
+  label,
   allLabel,
   options,
   value,
   onChange,
 }: {
   paramKey: string;
+  label: string;
   allLabel: string;
   options: Record<string, string>;
   value: string;
   onChange: (key: string, value: string) => void;
 }) {
+  // Label hiển thị trên trigger: nếu có giá trị -> "<label>: <selectedLabel>",
+  // không -> "<label>" (placeholder lo phần value trống).
+  const hasValue = value && value !== ALL;
+  const triggerLabel = hasValue ? `${label}: ${options[value] ?? value}` : label;
   return (
     <Select
       value={value || ALL}
       onValueChange={(v) => onChange(paramKey, v === ALL ? "" : String(v))}
     >
-      <SelectTrigger className="h-10 w-auto">
-        <SelectValue />
+      <SelectTrigger className="h-10 w-full">
+        <SelectValue placeholder={label}>{triggerLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ALL}>{allLabel}</SelectItem>
-        {Object.entries(options).map(([val, label]) => (
+        {Object.entries(options).map(([val, lbl]) => (
           <SelectItem key={val} value={val}>
-            {label}
+            {lbl}
           </SelectItem>
         ))}
       </SelectContent>
@@ -96,6 +103,28 @@ function ChipGroup({
   );
 }
 
+// Icon phễu/bộ lọc cho trigger.
+function FilterIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="7" y1="12" x2="17" y2="12" />
+      <line x1="10" y1="18" x2="14" y2="18" />
+    </svg>
+  );
+}
+
 export function MatchFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -122,42 +151,123 @@ export function MatchFilters() {
     router.push(`/matches?${params.toString()}`);
   }
 
+  // Xóa toàn bộ filter (về /matches không query).
+  function clearAll() {
+    router.push("/matches");
+  }
+
   const selectedSkills = searchParams.getAll("skillTier") as MatchSkillTier[];
   const selectedSlots = searchParams.getAll("timeSlot") as TimeSlot[];
 
   const skillOptions = Object.entries(skillTierLabels) as [MatchSkillTier, string][];
   const slotOptions = Object.entries(timeSlotLabels) as [TimeSlot, string][];
 
+  // Đếm filter active để đổi màu pill.
+  const activeCount =
+    (searchParams.get("matchType") ? 1 : 0) +
+    (searchParams.get("fieldType") ? 1 : 0) +
+    selectedSkills.length +
+    selectedSlots.length;
+  const hasFilters = activeCount > 0;
+
+  // Tóm tắt giá trị filter đang active để hiện trên pill (vd "16h30 · Yếu").
+  // Hiện tất cả giá trị; pill có max-width + truncate nên text quá dài sẽ tự "..."
+  // thay vì cắt số. Thứ tự: timeSlot > skillTier > matchType > fieldType.
+  const activeSummary = [
+    ...selectedSlots.map((s) => timeSlotLabels[s]),
+    ...selectedSkills.map((s) => skillTierLabels[s]),
+    ...(searchParams.get("matchType")
+      ? [matchTypeLabels[searchParams.get("matchType") as keyof typeof matchTypeLabels]]
+      : []),
+    ...(searchParams.get("fieldType")
+      ? [fieldTypeLabels[searchParams.get("fieldType") as keyof typeof fieldTypeLabels]]
+      : []),
+  ];
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        <FilterSelect
-          paramKey="matchType"
-          allLabel="Mọi loại kèo"
-          options={matchTypeLabels}
-          value={searchParams.get("matchType") ?? ""}
-          onChange={setParam}
-        />
-        <FilterSelect
-          paramKey="fieldType"
-          allLabel="Mọi loại sân"
-          options={fieldTypeLabels}
-          value={searchParams.get("fieldType") ?? ""}
-          onChange={setParam}
-        />
-      </div>
-      <ChipGroup
-        options={slotOptions}
-        selected={selectedSlots}
-        onToggle={(v) => toggleMulti("timeSlot", v)}
-        ariaLabel="Lọc theo khung giờ"
-      />
-      <ChipGroup
-        options={skillOptions}
-        selected={selectedSkills}
-        onToggle={(v) => toggleMulti("skillTier", v)}
-        ariaLabel="Lọc theo trình độ"
-      />
-    </div>
+    <Popover>
+      {/* Trigger: pill "Bộ lọc" + icon. Khi có filter active -> nền brand + hiển
+          thị tất cả giá trị đang lọc (vd "16h30 · Yếu"), pill max-width + truncate. */}
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Bộ lọc"
+            className={cn(
+              "inline-flex h-10 max-w-full items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
+              hasFilters
+                ? "border-brand bg-brand text-white"
+                : "border-line bg-surface text-ink-muted hover:border-brand hover:text-brand",
+            )}
+          />
+        }
+      >
+        <FilterIcon className="shrink-0" />
+        {hasFilters ? (
+          <span className="truncate">{activeSummary.join(" · ")}</span>
+        ) : (
+          "Bộ lọc"
+        )}
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[min(20rem,calc(100vw-2rem))] p-3"
+      >
+        {/* Header: tiêu đề + nút "Xóa tất cả". */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold text-ink">Bộ lọc</span>
+          {hasFilters ? (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-xs font-semibold text-brand hover:text-brand-hover hover:underline"
+            >
+              Xóa tất cả
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <FilterSelect
+            paramKey="matchType"
+            label="Loại kèo"
+            allLabel="Mọi loại kèo"
+            options={matchTypeLabels}
+            value={searchParams.get("matchType") ?? ""}
+            onChange={setParam}
+          />
+          <FilterSelect
+            paramKey="fieldType"
+            label="Loại sân"
+            allLabel="Mọi loại sân"
+            options={fieldTypeLabels}
+            value={searchParams.get("fieldType") ?? ""}
+            onChange={setParam}
+          />
+
+          {/* Khung giờ (multi). */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-ink-muted">Khung giờ</span>
+            <ChipGroup
+              options={slotOptions}
+              selected={selectedSlots}
+              onToggle={(v) => toggleMulti("timeSlot", v)}
+              ariaLabel="Lọc theo khung giờ"
+            />
+          </div>
+
+          {/* Trình độ (multi). */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-ink-muted">Trình độ</span>
+            <ChipGroup
+              options={skillOptions}
+              selected={selectedSkills}
+              onToggle={(v) => toggleMulti("skillTier", v)}
+              ariaLabel="Lọc theo trình độ"
+            />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -102,8 +102,9 @@ function bodyTag(matchType: MatchListItem["matchType"]): string {
 // Icon giữa body theo loại kèo.
 function bodyIcon(matchType: MatchListItem["matchType"], playersCount: number): string {
   if (matchType === "LOOKING_FOR_TEAM") return "👤".repeat(playersCount);
+  if (matchType === "NEED_PLAYERS") return "🧑‍🤝‍🧑"; // thiếu người — tìm thêm người
   if (matchType === "FIELD_AVAILABLE") return "🏟️";
-  return "⚽";
+  return "⚽"; // tìm đối
 }
 
 export function BroadcastCard({ match }: { match: MatchListItem }) {
