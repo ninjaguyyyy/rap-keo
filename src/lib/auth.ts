@@ -31,7 +31,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           update: {},
         });
 
-        return { id: user.id, email: user.email, name: user.name };
+        // Trả role để jwt callback đưa vào token (xem auth.config.ts).
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
   ],

@@ -10,6 +10,7 @@
 - email (string, unique, nullable)        -- đăng nhập OTP qua email
 - name (string, **nullable**)             -- cho nhập sau khi đăng nhập lần đầu (onboarding)
 - avatar_url (string, nullable)
+- role (enum: USER, ADMIN, default USER)  -- ADMIN: quyền tạo kèo từ text (AI parse) + quản trị
 - created_at, updated_at
 - *Ràng buộc nghiệp vụ:* mỗi user có ít nhất một định danh (email hoặc phone).
 

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireAdmin } from "@/lib/session";
 import { createMatchSchema, type CreateMatchState } from "./schemas";
+import { parseMatchFromText, type MatchDraft } from "./ai-parser";
 
 // Tạo kèo mới. creator = user đăng nhập. MVP: chưa gắn team/field/location
 // (Team CRUD, Field list, Map ở task sau) -> để null, user nhập area text.
@@ -89,4 +90,31 @@ export async function createMatch(
     console.error("createMatch error:", err);
     return { error: "Không tạo được kèo. Thử lại nhé." };
   }
+}
+
+// State cho useActionState parseMatchText.
+export type ParseMatchTextState = {
+  ok?: boolean;
+  data?: MatchDraft;
+  error?: string;
+  input?: string;
+};
+
+// Parse text tự do (copy từ FB) -> MatchDraft (admin-only). KHÔNG tạo match,
+// chỉ trả draft để form điền sẵn. requireAdmin vì tốn quota AI.
+export async function parseMatchText(
+  _prev: ParseMatchTextState,
+  formData: FormData,
+): Promise<ParseMatchTextState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Bạn không có quyền dùng tính năng này." };
+  }
+
+  const text = String(formData.get("rawText") ?? "").trim();
+  if (!text) return { error: "Dán text kèo vào ô trước khi phân tích." };
+
+  const data = await parseMatchFromText(text);
+  return { ok: true, data, input: text };
 }

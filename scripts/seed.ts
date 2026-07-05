@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "../src/lib/db";
 
 const DEMO_EMAIL = "demo@rapkeo.vn";
+const ADMIN_EMAIL = "admin@rapkeo.vn";
 
 // Toạ độ vài điểm ở Hà Nội (lng, lat)
 const HANOI = {
@@ -62,6 +63,14 @@ async function main() {
     await db.team.deleteMany({ where: { ownerId: existing.id } });
     await db.user.delete({ where: { id: existing.id } });
   }
+
+  // --- Admin user (role ADMIN) — dùng cho AI parse text tạo kèo ---
+  // Idempotent: upsert, không xóa dữ liệu liên quan (admin không tạo kèo/đội trong seed).
+  await db.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: { role: "ADMIN", name: "Admin Ráp Kèo" },
+    create: { email: ADMIN_EMAIL, name: "Admin Ráp Kèo", role: "ADMIN" },
+  });
 
   // --- User + Team ---
   const user = await db.user.create({
@@ -173,6 +182,7 @@ async function main() {
 
   const count = await db.match.count();
   console.log(`✅ Seed xong. Tổng số kèo trong DB: ${count}`);
+  console.log(`📧 Admin: ${ADMIN_EMAIL} (đăng nhập qua email OTP, mã log ra console ở dev)`);
 }
 
 main()

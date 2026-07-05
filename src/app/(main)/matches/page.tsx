@@ -31,8 +31,12 @@ export default async function MatchesPage({
             {matches.length} kèo sắp diễn ra
           </p>
         </div>
-        {/* Nút tạo kèo mở modal (client island). Auth check ở server, truyền xuống. */}
-        <CreateMatchDialog isAuthed={!!user} />
+        {/* Nút tạo kèo mở modal (client island). Auth check ở server, truyền xuống.
+            isAdmin cho phép section "Tạo kèo nhanh từ text" (AI parse). */}
+        <CreateMatchDialog
+          isAuthed={!!user}
+          isAdmin={user?.role === "ADMIN"}
+        />
       </div>
 
       <MatchFilters />

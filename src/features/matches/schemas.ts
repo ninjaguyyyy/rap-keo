@@ -26,8 +26,9 @@ const skillTierEnum = z.enum([
 const VN_OFFSET = "+07:00";
 const MIN_PLAYTIME_MS = 30 * 60 * 1000; // không cho tạo kèo trong quá khứ / sát giờ
 
-// Khu vực: 4 sân cố định (MVP). Map + field picker để task sau.
-const areaEnum = z.enum(["trung_tam", "da_phuoc", "chuyen_viet", "hong_phuc"]);
+// Khu vực: free text (label sân hoặc text tự do). MVP dùng combobox gợi ý 4 sân
+// nhưng cho phép nhập text khác (sân mới). Card display fallback hiện text thô.
+const areaSchema = z.string().trim().min(1, "Chọn khu vực").max(120, "Tối đa 120 ký tự");
 
 // Mảng timestamp "đã ghép" dạng "YYYY-MM-DDTHH:mm" từ form (client ghép date+slot).
 // Transform sang Date +07:00, validate mỗi combo >= now + 30', loại trùng.
@@ -70,7 +71,7 @@ export const createMatchSchema = z.object({
   hasField: z.boolean(),
   skillTiers: skillTiersSchema,
   playTimes: playTimesSchema,
-  area: areaEnum,
+  area: areaSchema,
   playersCount: z.number().int().min(1).max(2).default(1),
   note: z.string().trim().max(500, "Ghi chú tối đa 500 ký tự").optional(),
 });

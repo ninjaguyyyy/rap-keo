@@ -87,6 +87,12 @@ enum OtpChannel {
   PHONE
 }
 
+// Vai trò user. ADMIN: có quyền tạo kèo từ text (AI parse) + các thao tác admin khác.
+enum UserRole {
+  USER
+  ADMIN
+}
+
 // ---------- Models ----------
 
 model User {
@@ -97,6 +103,8 @@ model User {
   // name nullable: cho user nhập sau khi đăng nhập lần đầu (onboarding).
   name      String?
   avatarUrl String?  @map("avatar_url")
+  // Vai trò: USER mặc định; ADMIN có quyền parse text tạo kèo + quản trị.
+  role      UserRole @default(USER) @map("role")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

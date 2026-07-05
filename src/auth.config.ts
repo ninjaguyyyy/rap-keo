@@ -31,11 +31,20 @@ export const authConfig = {
       return true;
     },
     jwt({ token, user }) {
-      if (user) token.sub = user.id;
+      if (user) {
+        token.sub = user.id;
+        // Đưa role vào token để session callback đọc được.
+        const u = user as { role?: string };
+        if (u.role) token.role = u.role;
+      }
       return token;
     },
     session({ session, token }) {
       if (token.sub && session.user) session.user.id = token.sub;
+      // Expose role lên session.user để UI/action check admin.
+      if (token.role && session.user) {
+        (session.user as { role?: string }).role = token.role as never;
+      }
       return session;
     },
   },

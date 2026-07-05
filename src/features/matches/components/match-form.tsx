@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,12 @@ import {
   skillTierLabels,
   timeSlotLabels,
 } from "../labels";
-import { createMatch } from "../actions";
+import { createMatch, parseMatchText } from "../actions";
 import type { CreateMatchState } from "../schemas";
-import type { MatchSkillTier } from "@/generated/prisma/enums";
+import type { ParseMatchTextState } from "../actions";
+import type { MatchSkillTier, MatchType, FieldType } from "@/generated/prisma/enums";
+import type { MatchDraft } from "../ai-parser";
+import { AreaCombobox } from "./area-combobox";
 
 // TimeSlot = keyof TIME_SLOT_RANGES (queries.ts) — nhưng queries.ts là server-only,
 // nên định nghĩa type client-side khớp tuple (value là key cho URL/hidden input).
@@ -64,11 +67,14 @@ const TIME_SLOT_START: Record<TimeSlot, string> = {
   "2130": "21:30",
 };
 
-export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
+export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => void; isAdmin?: boolean }) {
   const [state, formAction, pending] = useActionState(
     createMatch,
     initialState,
   );
+  const [parseState, setParseState] = useState<ParseMatchTextState>({});
+  const [parseInput, setParseInput] = useState("");
+  const [parseFetching, startParseTransition] = useTransition();
   const router = useRouter();
   // Ngày đá: default hôm nay (chỉ tính trên client để tránh mismatch SSR).
   const [playDate, setPlayDate] = useState<string>(todayStr);
@@ -82,6 +88,14 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
   const [matchType, setMatchType] = useState<string>("FIND_OPPONENT");
   // Số cầu rảnh (chỉ dùng cho LOOKING_FOR_TEAM). Default 1.
   const [playersCount, setPlayersCount] = useState<number>(1);
+  // Khu vực (combobox free text — AI parser set được). State giữ label hoặc text tự do.
+  const [area, setArea] = useState<string>("Sân Trung Tâm");
+  // fieldType controlled (cho AI parser set) — defaultValue fallback F7.
+  const [fieldTypeValue, setFieldTypeValue] = useState<string>("F7");
+  // note controlled (cho AI parser set).
+  const [noteValue, setNoteValue] = useState<string>("");
+  // Track lần parse để tránh apply lại cùng draft sau khi user đã sửa.
+  const [lastParsedInput, setLastParsedInput] = useState<string | null>(null);
 
   function toggleSkill(value: MatchSkillTier) {
     setSkillTiers((prev) =>
@@ -117,8 +131,91 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
     }
   }, [state, router, onSuccess]);
 
+  // Apply draft từ AI parser vào state form (chạy 1 lần khi parse xong).
+  // Tránh apply lại: track input đã parse bằng parseState.input.
+  // Lint rule react-hooks/set-state-in-effect tắt cho khối này vì đây là side-effect
+  // có chủ đích: sync kết quả server action (parseState) về form state.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!parseState?.ok || !parseState.data) return;
+    if (parseState.input === lastParsedInput) return;
+    setLastParsedInput(parseState.input ?? null);
+
+    const draft: MatchDraft = parseState.data;
+    if (draft.matchType) setMatchType(draft.matchType);
+    if (draft.fieldType) {
+      setFieldTypeValue(draft.fieldType);
+    }
+    if (draft.skillTiers && draft.skillTiers.length > 0) {
+      setSkillTiers(draft.skillTiers);
+    }
+    if (draft.timeSlots && draft.timeSlots.length > 0) {
+      setTimeSlots(draft.timeSlots as TimeSlot[]);
+    }
+    if (typeof draft.hasField === "boolean") setHasField(draft.hasField);
+    // draft.area có thể là enum key (từ AI: "trung_tam") -> map sang label "Sân Trung Tâm".
+    // Nếu không match key -> dùng nguyên text (free text).
+    if (draft.area) setArea(areaLabels[draft.area] ?? draft.area);
+    if (draft.note) setNoteValue(draft.note);
+  }, [parseState, lastParsedInput]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {/* Admin: section "Phân tích text" — dán text FB, Gemini điền form. */}
+      {isAdmin ? (
+        <div className="rounded-lg border border-brand/30 bg-brand-soft/40 p-3">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="text-base" aria-hidden="true">✨</span>
+            <span className="text-sm font-bold text-ink">Tạo kèo nhanh từ text</span>
+            <span className="ml-auto rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
+              ADMIN
+            </span>
+          </div>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Dán text kèo copy từ group FB — AI điền giúp các trường bên dưới.
+          </p>
+          {/* Parse bằng transition (gọi server action trực tiếp, không nested <form>
+              để tránh lỗi "form unexpectedly submitted" khi nằm trong form Tạo kèo). */}
+          <div className="flex flex-col gap-2">
+            <Textarea
+              value={parseInput}
+              onChange={(e) => setParseInput(e.target.value)}
+              rows={3}
+              required
+              placeholder="VD: Cần tìm kèo Yếu đã có sân trung tâm 19h30 sân 7..."
+              className="text-sm"
+            />
+            {parseState?.error ? (
+              <p className="text-xs text-destructive">{parseState.error}</p>
+            ) : null}
+            {parseState?.ok && parseState.data ? (
+              <p className="text-xs font-medium text-brand">
+                ✓ Đã điền form từ text — kiểm tra lại rồi &ldquo;Đăng kèo&rdquo;.
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={parseFetching || !parseInput.trim()}
+              onClick={() =>
+                startParseTransition(async () => {
+                  // Gọi server action trực tiếp (trả Promise<state>), setState thủ công.
+                  // Tránh useActionState + nested form (lỗi "form unexpectedly submitted").
+                  const fd = new FormData();
+                  fd.set("rawText", parseInput);
+                  const result = await parseMatchText(parseState, fd);
+                  setParseState(result);
+                })
+              }
+              className="h-9 w-full text-sm"
+            >
+              {parseFetching ? "Đang phân tích..." : "Phân tích AI"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Loại kèo */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="matchType">Loại kèo</Label>
@@ -130,7 +227,7 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
           required
         >
           <SelectTrigger id="matchType" className="h-11 w-full">
-            <SelectValue />
+            <SelectValue>{matchTypeLabels[matchType as MatchType]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {Object.entries(matchTypeLabels).map(([val, label]) => (
@@ -186,9 +283,15 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
       {/* Loại sân */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="fieldType">Loại sân</Label>
-        <Select name="fieldType" defaultValue="F7" required>
+        <Select
+          name="fieldType"
+          value={fieldTypeValue}
+          onValueChange={(v) => setFieldTypeValue(String(v))}
+          defaultValue="F7"
+          required
+        >
           <SelectTrigger id="fieldType" className="h-11 w-full">
-            <SelectValue />
+            <SelectValue>{fieldTypeLabels[fieldTypeValue as FieldType]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {Object.entries(fieldTypeLabels).map(([val, label]) => (
@@ -359,21 +462,15 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
         )}
       </div>
 
-      {/* Khu vực — chọn 1 trong 4 sân (MVP). */}
+      {/* Khu vực — combobox: gợi ý 4 sân + cho nhập text tự do. Controlled để
+          AI parser set được (map key->label khi apply draft). */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="area">Khu vực</Label>
-        <Select name="area" defaultValue="trung_tam" required>
-          <SelectTrigger id="area" className="h-11 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(areaLabels).map(([val, label]) => (
-              <SelectItem key={val} value={val}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AreaCombobox
+          value={area}
+          onChange={setArea}
+          required
+        />
         {state.fieldErrors?.area ? (
           <p className="text-sm text-destructive">
             {state.fieldErrors.area}
@@ -389,6 +486,8 @@ export function MatchForm({ onSuccess }: { onSuccess?: () => void }) {
           name="note"
           maxLength={500}
           rows={3}
+          value={noteValue}
+          onChange={(e) => setNoteValue(e.target.value)}
           placeholder="VD: Tìm đối giao hữu, fair-play, có sẵn áo đấu..."
           className="text-base"
         />

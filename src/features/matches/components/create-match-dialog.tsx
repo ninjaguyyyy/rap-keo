@@ -17,7 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { MatchForm } from "./match-form";
 
-export function CreateMatchDialog({ isAuthed }: { isAuthed: boolean }) {
+export function CreateMatchDialog({
+  isAuthed,
+  isAdmin = false,
+}: {
+  isAuthed: boolean;
+  isAdmin?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -54,7 +60,7 @@ export function CreateMatchDialog({ isAuthed }: { isAuthed: boolean }) {
         </DialogHeader>
 
         {isAuthed ? (
-          <MatchForm onSuccess={() => setOpen(false)} />
+          <MatchForm onSuccess={() => setOpen(false)} isAdmin={isAdmin} />
         ) : (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             {/* Icon bóng + thông báo đăng nhập. */}
