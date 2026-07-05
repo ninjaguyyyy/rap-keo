@@ -43,6 +43,17 @@
   --color-type-players-soft: #fef3c7;
   --color-type-field: #047857;
   --color-type-field-soft: #d1fae5;
+  --color-type-team: #7c3aed;
+  --color-type-team-soft: #ede9fe;
+
+  /*
+   * Spotlight tone — phiên bản đậm hơn của cặp màu badge, dùng cho header card
+   * để phân biệt 4 loại kèo. Chữ trắng trên các nền này đạt WCAG AA (contrast ≥ 4.5).
+   */
+  --color-type-opponent-spotlight: #b91c1c; /* đỏ tối — tinh thần chiến đấu */
+  --color-type-players-spotlight: #92400e; /* hổ phách đậm */
+  --color-type-field-spotlight: #065f46; /* xanh ngọc đậm */
+  --color-type-team-spotlight: #5b21b6; /* tím đậm */
 
   /* radius scale do shadcn quản (suy từ --radius). */
 
@@ -188,5 +199,22 @@
 
   .spotlight {
     @apply bg-brand-spotlight text-white;
+  }
+
+  /*
+   * Spotlight tone cho header card — phân biệt 4 loại kèo. Mỗi class set nền
+   * tone riêng + chữ trắng; dùng kèm .hex-bg để có họa tiết lục giác.
+   */
+  .spotlight-opponent {
+    @apply bg-type-opponent-spotlight text-white;
+  }
+  .spotlight-players {
+    @apply bg-type-players-spotlight text-white;
+  }
+  .spotlight-field {
+    @apply bg-type-field-spotlight text-white;
+  }
+  .spotlight-team {
+    @apply bg-type-team-spotlight text-white;
   }
 }

@@ -10,6 +10,7 @@ export const matchTypeLabels: Record<MatchType, string> = {
   FIND_OPPONENT: "Tìm đối",
   NEED_PLAYERS: "Thiếu người",
   FIELD_AVAILABLE: "Có sân trống",
+  LOOKING_FOR_TEAM: "Tìm đội",
 };
 
 export const fieldTypeLabels: Record<FieldType, string> = {
@@ -81,7 +82,9 @@ export function formatPlayTime(date: Date): string {
   return playTimeFormatter.format(date);
 }
 
-// Định dạng mảng giờ đá: gộp chung ngày nếu cùng ngày, VD "07/07 18h30 · 20h30".
+// Định dạng mảng giờ đá: gộp chung ngày nếu cùng ngày, VD "Th 3, 07/07 · 18h30 | 20h30".
+// Dùng " | " (thay vì " · ") giữa các giờ để tránh nhầm thành khoảng thời gian
+// "18h30-20h30" — "18h30 | 20h30" đọc rõ là 2 giờ rời rạc (HOẶC, không phải TỚI).
 // Sort tăng dần theo thời gian trước khi format.
 const dayMonthFormatter = new Intl.DateTimeFormat("vi-VN", {
   weekday: "short",
@@ -100,6 +103,6 @@ export function formatPlayTimes(dates: Date[]): string {
   if (sorted.length === 0) return "";
   const first = sorted[0];
   const dayLabel = dayMonthFormatter.format(first);
-  const hours = sorted.map((d) => hourMinuteFormatter.format(d)).join(" · ");
-  return `${dayLabel} ${hours}`;
+  const hours = sorted.map((d) => hourMinuteFormatter.format(d)).join(" | ");
+  return `${dayLabel} · ${hours}`;
 }

@@ -148,6 +148,26 @@ async function main() {
         playTimes: [vnDateTime(3, "05:00"), vnDateTime(3, "06:30")],
         note: "Tìm đối trình mạnh, đá sáng cuối tuần.",
       },
+      {
+        creatorId: user.id,
+        // Không gắn teamId — cá nhân rảnh tìm đội.
+        matchType: "LOOKING_FOR_TEAM",
+        fieldType: "F7",
+        skillTiers: ["AVERAGE", "ABOVE_AVERAGE"],
+        area: "trung_tam",
+        playTimes: [vnDateTime(2, "19:30")],
+        // Format "[N cầu rảnh] note" để card hiển thị đúng (xem broadcast-card.tsx).
+        note: "[1 cầu rảnh] Mình rảnh 1 người, tìm đội thiếu người đá kèo.",
+      },
+      {
+        creatorId: user.id,
+        matchType: "LOOKING_FOR_TEAM",
+        fieldType: "F5",
+        skillTiers: ["GOOD", "STRONG"],
+        area: "da_phuoc",
+        playTimes: [vnDateTime(2, "20:30"), vnDateTime(2, "21:30")],
+        note: "[2 cầu rảnh] 2 anh em rảnh, tìm đội nhận đá nội bộ hoặc kèo.",
+      },
     ],
   });
 

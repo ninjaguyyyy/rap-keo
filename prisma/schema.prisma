@@ -55,6 +55,7 @@ enum MatchType {
   FIND_OPPONENT
   NEED_PLAYERS
   FIELD_AVAILABLE
+  LOOKING_FOR_TEAM
 }
 
 enum MatchStatus {

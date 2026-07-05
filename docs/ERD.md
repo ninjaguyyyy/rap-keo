@@ -57,7 +57,7 @@
 - id (uuid, pk)
 - creator_id (fk -> User.id)
 - team_id (fk -> Team.id, nullable)       -- đội tạo kèo
-- match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE)
+- match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE, LOOKING_FOR_TEAM)
 - field_type (enum: F5, F7, F11)
 - skill_tiers (array enum: 7 mức như Team + ANY = mọi trình độ)  -- kèo mở cho nhiều trình độ cùng lúc
 - field_id (fk -> Field.id, nullable)     -- sân cụ thể nếu đã có

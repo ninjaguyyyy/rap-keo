@@ -78,6 +78,10 @@ export function MatchForm() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   // Đã có sân hay chưa (radio 2 lựa chọn). Default: chưa có sân.
   const [hasField, setHasField] = useState<boolean>(false);
+  // Loại kèo (controlled để show/hide field "Số cầu rảnh" khi LOOKING_FOR_TEAM).
+  const [matchType, setMatchType] = useState<string>("FIND_OPPONENT");
+  // Số cầu rảnh (chỉ dùng cho LOOKING_FOR_TEAM). Default 1.
+  const [playersCount, setPlayersCount] = useState<number>(1);
 
   function toggleSkill(value: MatchSkillTier) {
     setSkillTiers((prev) =>
@@ -115,7 +119,13 @@ export function MatchForm() {
       {/* Loại kèo */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="matchType">Loại kèo</Label>
-        <Select name="matchType" defaultValue="FIND_OPPONENT" required>
+        <Select
+          name="matchType"
+          value={matchType}
+          onValueChange={(v) => setMatchType(String(v))}
+          defaultValue="FIND_OPPONENT"
+          required
+        >
           <SelectTrigger id="matchType" className="h-11 w-full">
             <SelectValue />
           </SelectTrigger>
@@ -133,6 +143,42 @@ export function MatchForm() {
           </p>
         ) : null}
       </div>
+
+      {/* Số cầu rảnh — chỉ hiện khi LOOKING_FOR_TEAM (cá nhân 1-2 cầu tìm đội). */}
+      {matchType === "LOOKING_FOR_TEAM" ? (
+        <div className="flex flex-col gap-1.5">
+          <Label>Số cầu rảnh</Label>
+          <div className="flex gap-2" role="group" aria-label="Số cầu rảnh">
+            {[1, 2].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPlayersCount(n)}
+                aria-pressed={playersCount === n}
+                className={cn(
+                  "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold transition-colors",
+                  playersCount === n
+                    ? "border-brand bg-brand text-white"
+                    : "border-line bg-surface text-ink-muted hover:border-brand hover:text-brand",
+                )}
+              >
+                <span className="text-base" aria-hidden="true">
+                  {"👤".repeat(n)}
+                </span>
+                {n} cầu
+              </button>
+            ))}
+          </div>
+          <input
+            type="hidden"
+            name="playersCount"
+            value={playersCount}
+          />
+          <p className="text-xs text-muted-foreground">
+            Bạn có 1-2 cầu rảnh, muốn tìm đội đá nội bộ hoặc kèo.
+          </p>
+        </div>
+      ) : null}
 
       {/* Loại sân */}
       <div className="flex flex-col gap-1.5">
