@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Float button trạng thái kèo — Mock (Ráp Kèo)</title>
+
+    <!--
+      Mock STANDALONE cho float button trên /matches.
+      Khi user đã có kèo OPEN (hoặc MATCHED), hiện nút tròn dính dưới phải.
+      Click -> popup (bottom sheet trên mobile) show trạng thái kèo của họ + CTA.
+
+      2 trạng thái được mock (cùng 1 trang, kế nhau) để so sánh:
+        (A) Kèo OPEN, chưa ai hỏi  -> dot brand-bright, popup "Đang hiển thị"
+        (B) Kèo OPEN, có 2 đội hỏi  -> dot lime + badge số, popup list request
+
+      Palette thật Ráp Kèo (DESIGN.md / globals.css). Mở bằng browser.
+    -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: "#15803D", brandHover: "#166534", brandBright: "#16A34A",
+              brandSoft: "#DCFCE7", brandSpotlight: "#1A531A",
+              accentLime: "#CCFF00", accentLimeInk: "#144014", accentYellow: "#FBC02D",
+              ink: "#111827", inkMuted: "#6B7280", inkSubtle: "#9CA3AF",
+              surface: "#FFFFFF", surfaceMuted: "#F9FAFB", line: "#E5E7EB",
+              danger: "#DC2626", dangerSoft: "#FEE2E2",
+              typeOpponent: "#1D4ED8", typeOpponentSoft: "#DBEAFE",
+              typePlayers: "#B45309", typePlayersSoft: "#FEF3C7",
+              typeField: "#047857", typeFieldSoft: "#D1FAE5",
+              typeTeam: "#7C3AED", typeTeamSoft: "#EDE9FE",
+            },
+            fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+    <style>
+      @layer components {
+        .hex-bg {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.06' stroke-width='1.2'%3E%3Cpath d='M28 0L56 16.18V49.5L28 65.7 0 49.5V16.18zM28 65.7L56 81.9V100H0V81.9z'/%3E%3C/g%3E%3C/svg%3E");
+          background-size: 56px 100px;
+        }
+        .spotlight { background-color: #1a531a; color: #fff; }
+      }
+      /* Đóng cửa sổ (cho demo: click nút đóng). */
+      details > summary { list-style: none; }
+      details > summary::-webkit-details-marker { display: none; }
+    </style>
+  </head>
+
+  <body class="bg-surfaceMuted font-sans text-ink antialiased">
+    <!-- Khung mobile-first mô phỏng /matches. -->
+    <div class="relative mx-auto flex min-h-dvh max-w-md flex-col gap-3 px-4 pb-28 pt-0">
+
+      <!-- Header /matches (giống thật) -->
+      <header class="spotlight hex-bg sticky top-0 z-10 -mx-4 px-4 py-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-lg font-extrabold text-white">Ráp Kèo</span>
+          </div>
+          <span class="text-sm font-medium text-white/80">Đăng xuất</span>
+        </div>
+      </header>
+
+      <!-- Title /matches -->
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="text-xl font-bold text-ink">Kèo đang mở</h1>
+          <p class="text-sm text-inkMuted">8 kèo sắp diễn ra</p>
+        </div>
+      </div>
+
+      <!-- Vài card kèo giả (đại diện list /matches) -->
+      <div class="flex flex-col gap-3">
+        <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+          <p class="text-sm font-bold text-ink">Sân Trung Tâm · F5 · 19h00 CN</p>
+          <p class="text-xs text-inkMuted">Quận 10 · Khá · Mạnh</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+          <p class="text-sm font-bold text-ink">Đa Phước · F7 · 20h00 T6</p>
+          <p class="text-xs text-inkMuted">Quận 8 · Trung Bình · Khá</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+          <p class="text-sm font-bold text-ink">Chuyên Việt · F5 · 17h00 CN</p>
+          <p class="text-xs text-inkMuted">Quận 7 · Yếu · TB Yếu</p>
+        </div>
+      </div>
+
+      <p class="px-2 pt-2 text-center text-xs text-inkSubtle">
+        ↑ Đây là trang /matches bình thường. Float button dính dưới-phải Pilot thấy ở 2 mock kế.
+      </p>
+
+      <!-- ===================================================================
+           (A) FLOAT BUTTON — kèo OPEN, chưa ai hỏi
+           =================================================================== -->
+      <div class="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md items-end justify-center">
+        <!-- float button: tròn brand, dot brand-bright pulse -->
+        <button
+          class="pointer-events-auto group relative mb-[220px] mr-4 grid h-14 w-14 place-items-center rounded-full bg-brand text-white shadow-lg ring-4 ring-surface/80 transition-transform hover:scale-105 active:scale-95"
+          aria-label="Trạng thái kèo của tôi"
+        >
+          <!-- icon whistle/ball -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>
+          <!-- dot trạng thái (brand-bright pulse) -->
+          <span class="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brandBright opacity-60"></span>
+            <span class="relative inline-flex h-3.5 w-3.5 rounded-full bg-brandBright ring-2 ring-surface"></span>
+          </span>
+        </button>
+      </div>
+
+      <!-- ===================================================================
+           (A) POPUP — bottom sheet dạng "Đang hiển thị trên bảng kèo"
+           =================================================================== -->
+      <div class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md rounded-t-2xl border border-line bg-surface p-4 shadow-2xl">
+        <!-- grabber -->
+        <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-line"></div>
+
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase tracking-wide text-inkSubtle">Kèo của tôi</p>
+            <p class="mt-0.5 text-lg font-bold text-ink">Sân Trung Tâm · F5</p>
+            <p class="text-sm text-inkMuted">CN 07/07 · 19h00 · Quận 10</p>
+          </div>
+          <button class="grid h-8 w-8 place-items-center rounded-full text-inkSubtle hover:bg-surfaceMuted" aria-label="Đóng">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Status row "đang hiển thị" -->
+        <div class="mt-3 flex items-center gap-2 rounded-lg bg-brandSoft px-3 py-2.5">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brandBright opacity-60"></span>
+            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-brandBright"></span>
+          </span>
+          <span class="text-sm font-semibold text-brand">Đang hiển thị trên bảng kèo</span>
+          <span class="ml-auto text-xs text-inkMuted">đăng 5 phút trước</span>
+        </div>
+
+        <!-- Số liệu -->
+        <div class="mt-3 flex items-center gap-4 text-xs">
+          <span class="inline-flex items-center gap-1 text-inkMuted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span><span class="font-bold text-ink">12</span> lượt xem</span>
+          </span>
+          <span class="inline-flex items-center gap-1 text-inkMuted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <span><span class="font-bold text-ink">0</span> đội hỏi</span>
+          </span>
+        </div>
+
+        <!-- CTA -->
+        <div class="mt-3 flex gap-2">
+          <button class="flex-1 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink hover:bg-surfaceMuted">Chỉnh sửa</button>
+          <button class="flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brandHover">Xem trên bảng</button>
+        </div>
+        <a href="#" class="mt-2 block text-center text-xs font-semibold text-brand hover:underline">Quản lý trong “Kèo của tôi” ›</a>
+      </div>
+
+      <!-- ===================================================================
+           (B) FLOAT BUTTON — kèo OPEN, CÓ đội hỏi (badge số)
+           =================================================================== -->
+      <div class="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md items-end justify-center">
+        <button
+          class="pointer-events-auto group relative mb-[440px] mr-4 grid h-14 w-14 place-items-center rounded-full bg-brand text-white shadow-lg ring-4 ring-surface/80 transition-transform hover:scale-105 active:scale-95"
+          aria-label="Trạng thái kèo của tôi"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>
+          <!-- Badge số đội hỏi (lime) -->
+          <span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accentLime px-1 text-xs font-bold text-accentLimeInk ring-2 ring-surface">
+            2
+          </span>
+        </button>
+      </div>
+
+      <!-- ===================================================================
+           (B) POPUP — "2 đội đang hỏi" + list request + accept/reject
+           =================================================================== -->
+      <div class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md rounded-t-2xl border border-typeField/30 bg-surface p-4 shadow-2xl ring-1 ring-typeFieldSoft">
+        <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-line"></div>
+
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase tracking-wide text-inkSubtle">Kèo của tôi</p>
+            <p class="mt-0.5 text-lg font-bold text-ink">Đa Phước · F7</p>
+            <p class="text-sm text-inkMuted">T6 12/07 · 20h00 · Quận 8</p>
+          </div>
+          <!-- Badge số đội hỏi nổi trên header popup -->
+          <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accentLime px-2.5 py-1 text-xs font-bold text-accentLimeInk">
+            <span class="relative flex h-2 w-2">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accentLimeInk opacity-50"></span>
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-accentLimeInk"></span>
+            </span>
+            2 ĐỘI ĐANG HỎI
+          </span>
+        </div>
+
+        <!-- List request inline -->
+        <div class="mt-3 flex flex-col gap-2">
+          <div class="rounded-xl border border-line bg-surfaceMuted p-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-ink">Real Thố Bát FC</p>
+                <p class="mt-0.5 text-xs text-inkMuted">cách bạn 2.3 km · muốn đá khung 20h00</p>
+              </div>
+              <span class="shrink-0 rounded-full bg-typeFieldSoft px-2 py-0.5 text-xs font-semibold text-typeField">Khá</span>
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button class="flex-1 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brandHover">Chấp nhận</button>
+              <button class="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-surfaceMuted">Từ chối</button>
+            </div>
+          </div>
+          <div class="rounded-xl border border-line bg-surfaceMuted p-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-ink">Gà Nôi FC</p>
+                <p class="mt-0.5 text-xs text-inkMuted">cách bạn 1.1 km · linh hoạt giờ</p>
+              </div>
+              <span class="shrink-0 rounded-full bg-typePlayersSoft px-2 py-0.5 text-xs font-semibold text-typePlayers">TB Yếu</span>
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button class="flex-1 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brandHover">Chấp nhận</button>
+              <button class="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-surfaceMuted">Từ chối</button>
+            </div>
+          </div>
+        </div>
+
+        <a href="#" class="mt-3 block text-center text-xs font-semibold text-brand hover:underline">Xem tất cả trong “Kèo của tôi” ›</a>
+      </div>
+
+    </div>
+  </body>
+</html>

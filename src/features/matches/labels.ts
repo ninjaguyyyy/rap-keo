@@ -5,6 +5,7 @@ import type {
   MatchStatus,
   MatchType,
 } from "@/generated/prisma/enums";
+import type { MatchRequestStatus } from "@/generated/prisma/enums";
 
 export const matchTypeLabels: Record<MatchType, string> = {
   FIND_OPPONENT: "Tìm đối",
@@ -45,7 +46,7 @@ export const timeSlotLabels: Record<string, string> = {
   "2130": "21h30",
 };
 
-// Khu vực / sân (MVP: cố định 4 sân phổ biến. Map + field picker để task sau).
+// Sân (MVP: cố định 4 sân phổ biến. Map + field picker để task sau).
 export const areaLabels: Record<string, string> = {
   trung_tam: "Sân Trung Tâm",
   da_phuoc: "Đa Phước",
@@ -66,6 +67,14 @@ export const matchStatusLabels: Record<MatchStatus, string> = {
   COMPLETED: "Hoàn thành",
   CANCELLED: "Đã hủy",
   EXPIRED: "Hết hạn",
+};
+
+// Trạng thái yêu cầu ghép kèo (MatchRequest) — hiển thị trong "Kèo của tôi".
+export const matchRequestStatusLabels: Record<MatchRequestStatus, string> = {
+  PENDING: "Đang chờ",
+  ACCEPTED: "Đã chấp nhận",
+  REJECTED: "Đã từ chối",
+  CANCELLED: "Đã hủy",
 };
 
 // Định dạng thời gian đá (giờ Việt Nam).

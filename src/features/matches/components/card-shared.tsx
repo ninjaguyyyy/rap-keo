@@ -93,13 +93,13 @@ export function SkillFieldBadges({ match }: MatchCardProps) {
   );
 }
 
-// Dòng khu vực + sân cụ thể (nếu có).
+// Dòng sân (label + sân cụ thể nếu có).
 export function AreaLine({ match }: MatchCardProps) {
   return (
     <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <MapPinIcon className="shrink-0 text-brand" />
       <span>
-        {areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có khu vực"}
+        {areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có sân"}
         {match.field?.name ? (
           <span className="text-ink-subtle"> · {match.field.name}</span>
         ) : null}

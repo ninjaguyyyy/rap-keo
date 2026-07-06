@@ -112,10 +112,10 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
   const isLookingForTeam = match.matchType === "LOOKING_FOR_TEAM";
   const isNeedPlayers = match.matchType === "NEED_PLAYERS";
   const isFieldAvailable = match.matchType === "FIELD_AVAILABLE";
-  // Header trái: LOOKING_FOR_TEAM -> tên user tạo (cá nhân); khác -> venue (khu vực/sân).
+  // Header trái: LOOKING_FOR_TEAM -> tên user tạo (cá nhân); khác -> venue (sân).
   const headerLabel = isLookingForTeam
     ? (match.creator.name ?? "Người dùng ẩn danh")
-    : (areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có khu vực");
+    : (areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có sân");
   const playersCount = parsePlayersCount(match.note);
 
   // Icon header theo loại kèo.

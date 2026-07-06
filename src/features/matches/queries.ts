@@ -137,3 +137,60 @@ export async function listMatches(filters: MatchFilters = {}) {
 }
 
 export type MatchListItem = Awaited<ReturnType<typeof listMatches>>[number];
+
+/**
+ * Liệt kê tất cả kèo do user tạo (creator-based, MVPe bypass team membership),
+ * kèm các yêu cầu ghép kèo (MatchRequest) để hiển thị trạng thái "có đội hỏi cáp".
+ * Không lọc theo status — user xem được cả kèo đang mở, đã chốt, đã hủy, hết hạn
+ * (tab "đang đăng"/"đã chốt"/"lịch sử" lọc ở UI sau). Sort mới nhất trước.
+ */
+// Include shape dùng chung cho listMyMatches + getActiveMyMatch (đồng bộ type).
+const myMatchInclude = {
+  team: { select: { id: true, name: true } },
+  field: { select: { id: true, name: true, address: true } },
+  creator: { select: { id: true, name: true } },
+  requests: {
+    include: {
+      requester: { select: { id: true, name: true } },
+      requesterTeam: { select: { id: true, name: true, skillTier: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  },
+} as const;
+
+export async function listMyMatches(userId: string) {
+  return db.match.findMany({
+    where: { creatorId: userId },
+    include: myMatchInclude,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export type MyMatchItem = Awaited<ReturnType<typeof listMyMatches>>[number];
+
+/**
+ * Lấy 1 kèo "active" của user để hiển thị float button trên /matches:
+ * ưu tiên kèo OPEN có nhiều request PENDING nhất, fallback kèo OPEN mới nhất.
+ * Trả null nếu user không có kèo OPEN nào (→ FAB không hiện).
+ */
+export async function getActiveMyMatch(
+  userId: string,
+): Promise<MyMatchItem | null> {
+  // Prisma không orderby trực tiếp "số PENDING" (cần filter trên count relation).
+  // Lấy top các kèo OPEN mới nhất, sort trong app theo số PENDING rồi createdAt.
+  const matches = await db.match.findMany({
+    where: { creatorId: userId, status: "OPEN" },
+    include: myMatchInclude,
+    orderBy: { createdAt: "desc" },
+    // Giới hạn để sort trong app nhẹ — user hiếm khi có >20 kèo OPEN cùng lúc.
+    take: 20,
+  });
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => {
+    const ap = a.requests.filter((r) => r.status === "PENDING").length;
+    const bp = b.requests.filter((r) => r.status === "PENDING").length;
+    if (ap !== bp) return bp - ap;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+  return matches[0];
+}

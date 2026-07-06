@@ -1,8 +1,9 @@
 import { MatchCard } from "@/features/matches/components/match-card";
 import { MatchFilters } from "@/features/matches/components/match-filters";
 import { CreateMatchDialog } from "@/features/matches/components/create-match-dialog";
+import { MyMatchFab } from "@/features/matches/components/my-match-fab";
 import { getCurrentUser } from "@/lib/session";
-import { listMatches, parseMatchFilters } from "@/features/matches/queries";
+import { listMatches, parseMatchFilters, getActiveMyMatch } from "@/features/matches/queries";
 
 // Next 16: searchParams là Promise. skillTier có thể lặp lại (?skillTier=A&skillTier=B).
 export default async function MatchesPage({
@@ -21,6 +22,8 @@ export default async function MatchesPage({
   // /matches là public, nhưng tạo kèo (modal) cần đăng nhập — check user để
   // hiện form hay thông báo đăng nhập trong dialog.
   const user = await getCurrentUser();
+  // FAB trạng thái kèo: chỉ load khi user đã đăng nhập (có thể có kèo OPEN).
+  const activeMatch = user ? await getActiveMyMatch(user.id) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,6 +76,9 @@ export default async function MatchesPage({
           ))}
         </ul>
       )}
+
+      {/* Float button trạng thái kèo của user đăng nhập (chỉ hiện khi có kèo OPEN). */}
+      <MyMatchFab match={activeMatch} />
     </div>
   );
 }

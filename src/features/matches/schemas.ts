@@ -26,9 +26,9 @@ const skillTierEnum = z.enum([
 const VN_OFFSET = "+07:00";
 const MIN_PLAYTIME_MS = 30 * 60 * 1000; // không cho tạo kèo trong quá khứ / sát giờ
 
-// Khu vực: free text (label sân hoặc text tự do). MVP dùng combobox gợi ý 4 sân
+// Sân: free text (label sân hoặc text tự do). MVP dùng combobox gợi ý 4 sân
 // nhưng cho phép nhập text khác (sân mới). Card display fallback hiện text thô.
-const areaSchema = z.string().trim().min(1, "Chọn khu vực").max(120, "Tối đa 120 ký tự");
+const areaSchema = z.string().trim().min(1, "Chọn sân").max(120, "Tối đa 120 ký tự");
 
 // Mảng timestamp "đã ghép" dạng "YYYY-MM-DDTHH:mm" từ form (client ghép date+slot).
 // Transform sang Date +07:00, validate mỗi combo >= now + 30', loại trùng.

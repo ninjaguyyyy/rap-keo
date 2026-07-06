@@ -1,6 +1,6 @@
 "use client";
 
-// Combobox khu vực: autocomplete 4 sân cố định + cho phép nhập text tự do.
+// Combobox sân: autocomplete 4 sân cố định + cho phép nhập text tự do.
 // - Gõ -> filter option theo label (case-insensitive, includes).
 // - Click option -> set value = label, đóng dropdown.
 // - Text không match -> vẫn giữ (free text). Submit nguyên text qua hidden input.

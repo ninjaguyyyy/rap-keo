@@ -88,7 +88,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
   const [matchType, setMatchType] = useState<string>("FIND_OPPONENT");
   // Số cầu rảnh (chỉ dùng cho LOOKING_FOR_TEAM). Default 1.
   const [playersCount, setPlayersCount] = useState<number>(1);
-  // Khu vực (combobox free text — AI parser set được). State giữ label hoặc text tự do.
+  // Sân (combobox free text — AI parser set được). State giữ label hoặc text tự do.
   const [area, setArea] = useState<string>("Sân Trung Tâm");
   // fieldType controlled (cho AI parser set) — defaultValue fallback F7.
   const [fieldTypeValue, setFieldTypeValue] = useState<string>("F7");
@@ -124,10 +124,11 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
 
   useEffect(() => {
     if (state.ok) {
-      // Trong modal -> đóng modal (list tự refresh qua revalidatePath trong action).
-      // Dùng chỗ khác (không có onSuccess) -> fallback redirect về /matches.
+      // Trong modal -> đóng modal rồi redirect sang "Kèo của tôi" để user thấy kèo
+      // vừa đăng + trạng thái. Dùng fallback /my-matches cả khi không có onSuccess
+      // (form dùng ngoài modal) vì đây là đích tự nhiên sau khi tạo kèo.
       if (onSuccess) onSuccess();
-      else router.push("/matches");
+      router.push("/my-matches");
     }
   }, [state, router, onSuccess]);
 
@@ -182,7 +183,6 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
               value={parseInput}
               onChange={(e) => setParseInput(e.target.value)}
               rows={3}
-              required
               placeholder="VD: Cần tìm kèo Yếu đã có sân trung tâm 19h30 sân 7..."
               className="text-sm"
             />
@@ -211,8 +211,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
               className="h-9 w-full text-sm"
             >
               {parseFetching ? "Đang phân tích..." : "Phân tích AI"}
-            </Button>
-          </div>
+            </Button>          </div>
         </div>
       ) : null}
 
@@ -462,10 +461,10 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
         )}
       </div>
 
-      {/* Khu vực — combobox: gợi ý 4 sân + cho nhập text tự do. Controlled để
+      {/* Sân — combobox: gợi ý 4 sân + cho nhập text tự do. Controlled để
           AI parser set được (map key->label khi apply draft). */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="area">Khu vực</Label>
+        <Label htmlFor="area">Sân</Label>
         <AreaCombobox
           value={area}
           onChange={setArea}

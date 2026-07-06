@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 import { requireUser, requireAdmin } from "@/lib/session";
 import { createMatchSchema, type CreateMatchState } from "./schemas";
 import { parseMatchFromText, type MatchDraft } from "./ai-parser";
-
 // Tạo kèo mới. creator = user đăng nhập. MVP: chưa gắn team/field/location
 // (Team CRUD, Field list, Map ở task sau) -> để null, user nhập area text.
 export async function createMatch(
@@ -85,6 +84,7 @@ export async function createMatch(
       console.log("[createMatch] hasField=true (chưa lưu cột DB trong MVP này)");
     }
     revalidatePath("/matches");
+    revalidatePath("/my-matches");
     return { ok: true };
   } catch (err) {
     console.error("createMatch error:", err);
@@ -117,4 +117,113 @@ export async function parseMatchText(
 
   const data = await parseMatchFromText(text);
   return { ok: true, data, input: text };
+}
+
+// Kết quả chung cho các action quản lý kèo (accept/reject/cancel).
+export type MatchActionState = { ok?: true; error?: string };
+
+// Load MatchRequest + match liên quan; đảm bảo user hiện tại là người TẠO kèo
+// (chỉ creator mới được chấp nhận/từ chối yêu cầu ghép kèo của mình).
+async function getOwnedMatchRequest(requestId: string, userId: string) {
+  const req = await db.matchRequest.findUnique({
+    where: { id: requestId },
+    include: { match: { select: { id: true, creatorId: true, status: true } } },
+  });
+  if (!req) return { error: "Yêu cầu không tồn tại." } as const;
+  if (req.match.creatorId !== userId) {
+    return { error: "Bạn không có quyền thao tác kèo này." } as const;
+  }
+  return { req } as const;
+}
+
+// Chấp nhận 1 yêu cầu ghép kèo: request này -> ACCEPTED, match -> MATCHED,
+// các request PENDING khác của cùng match -> REJECTED (PRD mục 7 + ERD).
+// Transaction để không bị race khi 2 request accept gần nhau.
+export async function acceptMatchRequest(
+  requestId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+  const loaded = await getOwnedMatchRequest(requestId, user.id);
+  if ("error" in loaded) return { error: loaded.error };
+  const { req } = loaded;
+
+  try {
+    await db.$transaction([
+      db.matchRequest.update({
+        where: { id: req.id },
+        data: { status: "ACCEPTED" },
+      }),
+      db.match.update({
+        where: { id: req.matchId },
+        data: { status: "MATCHED" },
+      }),
+      // Reject mọi request PENDING khác của cùng match.
+      db.matchRequest.updateMany({
+        where: { matchId: req.matchId, status: "PENDING", id: { not: req.id } },
+        data: { status: "REJECTED" },
+      }),
+    ]);
+    revalidatePath("/my-matches");
+    revalidatePath("/matches");
+    return { ok: true };
+  } catch (err) {
+    console.error("acceptMatchRequest error:", err);
+    return { error: "Không chấp nhận được yêu cầu. Thử lại nhé." };
+  }
+}
+
+// Từ chối 1 yêu cầu ghép kèo: chỉ request này -> REJECTED, không đổi match.status.
+export async function rejectMatchRequest(
+  requestId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+  const loaded = await getOwnedMatchRequest(requestId, user.id);
+  if ("error" in loaded) return { error: loaded.error };
+  const { req } = loaded;
+
+  try {
+    await db.matchRequest.update({
+      where: { id: req.id },
+      data: { status: "REJECTED" },
+    });
+    revalidatePath("/my-matches");
+    return { ok: true };
+  } catch (err) {
+    console.error("rejectMatchRequest error:", err);
+    return { error: "Không từ chối được yêu cầu. Thử lại nhé." };
+  }
+}
+
+// Gỡ kèo (creator hủy kèo đang mở): match -> CANCELLED. Các request PENDING còn lại
+// cũng REJECTED để không còn "treo" (request không thể hoàn thành khi match đã hủy).
+export async function cancelMyMatch(matchId: string): Promise<MatchActionState> {
+  const user = await requireUser();
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { creatorId: true, status: true },
+  });
+  if (!match) return { error: "Kèo không tồn tại." };
+  if (match.creatorId !== user.id) {
+    return { error: "Bạn không có quyền thao tác kèo này." };
+  }
+  if (match.status === "CANCELLED") return { ok: true };
+
+  try {
+    await db.$transaction([
+      db.match.update({
+        where: { id: matchId },
+        data: { status: "CANCELLED" },
+      }),
+      db.matchRequest.updateMany({
+        where: { matchId, status: "PENDING" },
+        data: { status: "REJECTED" },
+      }),
+    ]);
+    revalidatePath("/my-matches");
+    revalidatePath("/matches");
+    return { ok: true };
+  } catch (err) {
+    console.error("cancelMyMatch error:", err);
+    return { error: "Không gỡ được kèo. Thử lại nhé." };
+  }
 }
