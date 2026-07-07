@@ -20,14 +20,14 @@ export default async function MainLayout({
       <header className="spotlight hex-bg sticky top-0 z-10">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
           <Link href="/matches" className="flex items-center gap-2">
-            {/* Logo brand: quả bóng stylized, nguồn /public/logo-96.png (bản thu nhỏ cho header). */}
+            {/* Logo brand: quả bóng stylized, bản thu nhỏ /public/logo-96.png cho header (vuông 1:1). */}
             <Image
-              src="/logo-96.png"
+              src="/logo.png"
               alt="Ráp Kèo"
-              width={32}
-              height={32}
+              width={56}
+              height={56}
               priority
-              className="h-8 w-8 shrink-0 rounded-full ring-2 ring-white/20"
+              className="h-10 w-10 shrink-0 object-cover bg-white rounded-full"
             />
             <span className="text-lg font-extrabold tracking-tight text-white">
               Ráp Kèo
