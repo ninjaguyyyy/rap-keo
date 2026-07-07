@@ -1,28 +1,36 @@
 import { z } from "zod";
 
-// Email đăng nhập — chuẩn hoá: trim + lowercase.
-export const emailSchema = z
+// Số điện thoại Việt Nam: bắt đầu bằng 0, 9-10 chữ số (vd 09xxxxxxxx, 03xxxxxxxx).
+// Đơn giản hoá cho MVP — không verify durch mạng thật (không OTP SMS).
+export const phoneSchema = z
   .string()
   .trim()
-  .toLowerCase()
-  .email("Email không hợp lệ");
+  .regex(/^0\d{9,10}$/, "Số điện thoại không hợp lệ (vd: 0912345678)");
 
-// OTP 6 chữ số.
-export const otpSchema = z
+// Mật khẩu: tối thiểu 6 ký tự (MVP phủi, không bắt complexity nặng).
+export const passwordSchema = z
+  .string()
+  .min(6, "Mật khẩu tối thiểu 6 ký tự");
+
+// Tên hiển thị.
+export const nameSchema = z
   .string()
   .trim()
-  .regex(/^\d{6}$/, "Mã OTP gồm 6 chữ số");
+  .min(2, "Tên hiển thị tối thiểu 2 ký tự")
+  .max(50, "Tên hiển thị tối đa 50 ký tự");
 
-// Dùng cho server action xin OTP.
-export const requestOtpSchema = z.object({
-  email: emailSchema,
+// Đăng ký thủ công: SĐT + mật khẩu + tên hiển thị.
+export const registerSchema = z.object({
+  name: nameSchema,
+  phone: phoneSchema,
+  password: passwordSchema,
 });
 
-// Dùng cho bước xác thực (Credentials authorize).
-export const verifyOtpSchema = z.object({
-  email: emailSchema,
-  otp: otpSchema,
+// Đăng nhập bằng SĐT + mật khẩu (dùng cho Credentials authorize).
+export const loginSchema = z.object({
+  phone: phoneSchema,
+  password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
-export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
-export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

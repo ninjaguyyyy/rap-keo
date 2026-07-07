@@ -81,12 +81,6 @@ enum NotificationType {
   MATCH_CONFIRMED
 }
 
-// Kênh gửi OTP. Hiện dùng EMAIL; PHONE dành cho đăng nhập SĐT sau này.
-enum OtpChannel {
-  EMAIL
-  PHONE
-}
-
 // Vai trò user. ADMIN: có quyền tạo kèo từ text (AI parse) + các thao tác admin khác.
 enum UserRole {
   USER
@@ -97,9 +91,12 @@ enum UserRole {
 
 model User {
   id        String   @id @default(uuid()) @db.Uuid
-  // Đăng nhập đa phương thức: user có thể có email hoặc phone (ít nhất một).
+  // Đăng nhập đa phương thức: user có thể có phone, email hoặc cả hai.
   phone     String?  @unique
   email     String?  @unique
+  // Hash (bcrypt) cho user đăng nhập thủ công bằng SĐT + mật khẩu.
+  // Nullable: user đăng nhập bằng Google không có mật khẩu.
+  passwordHash String? @map("password_hash")
   // name nullable: cho user nhập sau khi đăng nhập lần đầu (onboarding).
   name      String?
   avatarUrl String?  @map("avatar_url")
@@ -107,6 +104,9 @@ model User {
   role      UserRole @default(USER) @map("role")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  // NextAuth OAuth: mỗi user có thể có nhiều Account (Google, ...).
+  accounts        Account[]
 
   ownedTeams      Team[]         @relation("TeamOwner")
   teamMemberships TeamMember[]
@@ -116,6 +116,28 @@ model User {
   notifications   Notification[]
 
   @@map("users")
+}
+
+// Lưu token OAuth (Google) — schema chuẩn của NextAuth adapter.
+// Cho phép link account OAuth vào user đã có (cùng email) và đăng nhập lại sau.
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refreshToken      String? @map("refresh_token")
+  accessToken       String? @map("access_token")
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
+  scope             String?
+  idToken           String? @map("id_token")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
 }
 
 model Team {
@@ -232,21 +254,4 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
-}
-
-// Mã OTP đăng nhập (đa kênh). Mã được hash trước khi lưu (không lưu plaintext).
-model OtpCode {
-  id          String     @id @default(uuid()) @db.Uuid
-  channel     OtpChannel
-  // destination: email (đã chuẩn hoá lowercase) hoặc số điện thoại (E.164).
-  destination String
-  codeHash    String     @map("code_hash")
-  expiresAt   DateTime   @map("expires_at")
-  attempts    Int        @default(0)
-  consumedAt  DateTime?  @map("consumed_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-
-  // tra cứu mã mới nhất theo đích đến + rate-limit theo thời gian
-  @@index([destination, channel, createdAt])
-  @@map("otp_codes")
 }

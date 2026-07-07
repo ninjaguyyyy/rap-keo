@@ -6,24 +6,24 @@
 
 ### User
 - id (uuid, pk)
-- phone (string, unique, **nullable**)   -- đăng nhập OTP qua SĐT (có thể trống nếu đăng nhập bằng email/OAuth)
-- email (string, unique, nullable)        -- đăng nhập OTP qua email
+- phone (string, unique, **nullable**)   -- đăng nhập thủ công SĐT + mật khẩu (có thể trống nếu đăng nhập bằng Google)
+- email (string, unique, nullable)        -- từ Google OAuth; dùng làm key gộp account
+- password_hash (string, nullable)        -- bcrypt; null đối với user Google
 - name (string, **nullable**)             -- cho nhập sau khi đăng nhập lần đầu (onboarding)
 - avatar_url (string, nullable)
 - role (enum: USER, ADMIN, default USER)  -- ADMIN: quyền tạo kèo từ text (AI parse) + quản trị
 - created_at, updated_at
 - *Ràng buộc nghiệp vụ:* mỗi user có ít nhất một định danh (email hoặc phone).
 
-### OtpCode (Mã OTP đăng nhập)
+### Account (OAuth)
 - id (uuid, pk)
-- channel (enum: EMAIL, PHONE)            -- hiện dùng EMAIL; PHONE dành cho sau
-- destination (string)                    -- email (lowercase) hoặc phone (E.164)
-- code_hash (string)                      -- OTP được hash, KHÔNG lưu plaintext
-- expires_at (timestamp)                  -- hết hạn (mặc định 5 phút)
-- attempts (int, default 0)               -- số lần thử sai, khoá sau ngưỡng
-- consumed_at (timestamp, nullable)       -- thời điểm mã được dùng thành công
-- created_at
-- index(destination, channel, created_at) -- tra mã mới nhất + rate-limit
+- user_id (fk -> User.id)
+- type (string)                          -- kiểu NextAuth (vd "oauth")
+- provider (string)                      -- "google"
+- provider_account_id (string)           -- ID user tại provider (Google)
+- refresh_token, access_token, id_token, scope, token_type, expires_at -- token lưu để refresh
+- unique(provider, provider_account_id)  -- mỗi account provider chỉ thuộc 1 user
+- *Gộp account:* khi Google user có email trùng user manual đã có, link vào cùng User (giữ phone/password đã có).
 
 ### Team
 - id (uuid, pk)

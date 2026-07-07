@@ -1,13 +1,13 @@
-import { EmailLoginForm } from "@/features/auth/components/email-login-form";
+import { LoginForm } from "@/features/auth/components/login-form";
 
 export default function LoginPage() {
   return (
     <div>
-      <h2 className="mb-1 text-xl font-bold text-ink">Đăng nhập</h2>
-      <p className="mb-6 text-sm text-ink-muted">
-        Nhập email để nhận mã đăng nhập.
+      <h2 className="text-[22px] font-bold text-ink">Đăng nhập</h2>
+      <p className="mb-6 mt-1 text-[13px] text-ink-muted">
+        Đăng nhập bằng số điện thoại và mật khẩu.
       </p>
-      <EmailLoginForm />
+      <LoginForm />
     </div>
   );
 }
