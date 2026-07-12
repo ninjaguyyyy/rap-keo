@@ -32,5 +32,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
+// Quên mật khẩu MVP: nhận số điện thoại để gửi hướng dẫn/OTP ở bước sau.
+export const forgotPasswordSchema = z.object({
+  phone: phoneSchema,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

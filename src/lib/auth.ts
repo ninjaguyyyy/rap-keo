@@ -6,7 +6,6 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/features/auth/schemas";
@@ -37,22 +36,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const { phone, password } = parsed.data;
+        const baseUrl =
+          process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
-        // Tìm user theo SĐT + có mật khẩu (user Google không có password).
-        const user = await db.user.findUnique({
-          where: { phone },
-        });
-        if (!user || !user.passwordHash) return null;
+        let response: Response;
+        try {
+          response = await fetch(`${baseUrl}/api/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify(parsed.data),
+          });
+        } catch {
+          return null;
+        }
 
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
+        if (!response.ok) return null;
+
+        const data = (await response.json().catch(() => ({}))) as {
+          user?: {
+            id?: string;
+            email?: string | null;
+            name?: string | null;
+            role?: string;
+          };
+        };
+
+        if (!data.user?.id) return null;
 
         return {
-          id: user.id,
-          email: user.email ?? undefined,
-          name: user.name ?? undefined,
-          role: user.role,
+          id: data.user.id,
+          email: data.user.email ?? undefined,
+          name: data.user.name ?? undefined,
+          role: data.user.role,
         };
       },
     }),

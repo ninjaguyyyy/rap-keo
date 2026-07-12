@@ -202,6 +202,24 @@
   }
 
   /*
+   * Hero background — ảnh home_bg.jpg + scrim gradient xanh spotlight (tối dần xuống đáy)
+   * để chữ/logo trắng trên hero đọc được. Dùng kèm .hex-bg để chồng họa tiết lục giác.
+   * Tham khảo mock docs/home-mock.html. Mục đích trang trí lớn (hero section layout), KHÔNG dùng cho card/input.
+   */
+  .hero-bg {
+    background-image:
+      linear-gradient(
+        to bottom,
+        rgba(20, 64, 20, 0.45) 0%,
+        rgba(20, 64, 20, 0.7) 60%,
+        rgba(20, 64, 20, 0.94) 100%
+      ),
+      url("/home_bg.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  /*
    * Spotlight tone cho header card — phân biệt 4 loại kèo. Mỗi class set nền
    * tone riêng + chữ trắng; dùng kèm .hex-bg để có họa tiết lục giác.
    */

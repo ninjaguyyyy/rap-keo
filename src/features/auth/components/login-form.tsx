@@ -1,65 +1,75 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "next-auth/react";
+import { loginSchema, type LoginInput } from "../schemas";
 import { GoogleButton } from "./google-button";
 
-// Login dùng signIn() client-side của next-auth (Credentials provider).
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: "onTouched",
+  });
 
-  const [state, formAction, pending] = useActionState(
-    // Wrapper useActionState cho phép return error string thay vì object.
-    async (_prev: string | undefined, formData: FormData) => {
-      const phone = formData.get("phone");
-      const password = formData.get("password");
-      try {
-        await signIn("credentials", {
-          phone,
-          password,
-          redirect: false,
-          callbackUrl,
+  const onSubmit = async (values: LoginInput) => {
+    try {
+      const result = await signIn("credentials", {
+        phone: values.phone,
+        password: values.password,
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (result?.error || !result?.ok) {
+        setError("root.serverError", {
+          message: "Số điện thoại hoặc mật khẩu không đúng.",
         });
-        return undefined;
-      } catch {
-        return "Số điện thoại hoặc mật khẩu không đúng.";
+        return;
       }
-    },
-    undefined,
-  );
 
-  // Đăng nhập thành công -> redirect.
-  useEffect(() => {
-    if (state === undefined) {
       router.push(callbackUrl);
       router.refresh();
+    } catch {
+      setError("root.serverError", {
+        message: "Không thể tạo phiên đăng nhập. Vui lòng thử lại.",
+      });
     }
-  }, [state, router, callbackUrl]);
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <form action={formAction} className="flex flex-col gap-3.5">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3.5" noValidate>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="phone" className="text-[13px]">
             Số điện thoại
           </Label>
           <Input
             id="phone"
-            name="phone"
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            required
             placeholder="0912345678"
+            aria-invalid={!!errors.phone}
             className="h-12 rounded-xl text-base"
+            {...register("phone")}
           />
+          {errors.phone ? (
+            <p className="text-sm text-destructive">{errors.phone.message}</p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -77,23 +87,30 @@ export function LoginForm() {
           </div>
           <Input
             id="password"
-            name="password"
             type="password"
             autoComplete="current-password"
-            required
             placeholder="••••••••"
+            aria-invalid={!!errors.password}
             className="h-12 rounded-xl text-base"
+            {...register("password")}
           />
+          {errors.password ? (
+            <p className="text-sm text-destructive">{errors.password.message}</p>
+          ) : null}
         </div>
 
-        {state ? <p className="text-sm text-destructive">{state}</p> : null}
+        {errors.root?.serverError ? (
+          <p className="text-sm text-destructive">
+            {errors.root.serverError.message}
+          </p>
+        ) : null}
 
         <Button
           type="submit"
-          disabled={pending}
+          disabled={isSubmitting}
           className="mt-1 h-12 w-full rounded-xl text-base"
         >
-          {pending ? "Đang đăng nhập..." : "Đăng nhập"}
+          {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
         </Button>
       </form>
 

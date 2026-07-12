@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -9,7 +10,7 @@ import type { ReactNode } from "react";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isRegister = pathname.startsWith("/register");
-  const bgImage = isRegister ? "/bg-signup.jpg" : "/bg-login.jpg";
+  const bgImage = isRegister ? "/register_bg.jpg" : "/login_bg.jpg";
   const tagline = isRegister
     ? "Tạo tài khoản để bắt đầu ráp kèo"
     : "Ráp kèo bóng đá phủi — tìm đối, tìm người, tìm sân";
@@ -27,10 +28,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           }}
         >
           <div className="mx-auto w-full max-w-md">
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[11px] font-semibold tracking-wide backdrop-blur">
-              ⚽ Ráp Kèo
-            </span>
-            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-sm">
+            <Image
+              src="/logo.png"
+              alt="Ráp Kèo"
+              width={64}
+              height={64}
+              priority
+              className="mx-auto mb-3 h-16 w-16 rounded-full bg-white object-cover"
+            />
+            <h1 className="text-5xl font-extrabold tracking-tight leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
               Ráp Kèo
             </h1>
             <p className="mt-1.5 text-sm text-white/85">{tagline}</p>

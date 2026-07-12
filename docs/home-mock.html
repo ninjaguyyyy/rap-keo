@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ráp Kèo — Home (Hero mockup)</title>
+
+    <!--
+      Mockup STANDALONE cho màn Home (list match). Mở bằng browser, không phụ thuộc build.
+      - Dùng ảnh `home_bg.jpg` (cùng thư mục docs/) làm hero banner phía trên.
+      - Palette/tokens theo DESIGN.md + globals.css: #15803D (brand), #1A531A (spotlight),
+        #CCFF00 (lime accent), #FBC02D (vàng). Chữ Việt.
+      - Layout mobile-first max-w-md (~448px) khớp MainLayout thật.
+      - Header GỌN: chỉ logo + tên + đăng nhập.
+      - Hero: chỉ ảnh bg + scrim xanh + hex overlay + tiêu đề "RÁP KÈO" + tagline.
+        KHÔNG eyebrow tag, KHÔNG nút tạo kèo, KHÔNG "gần bạn nhất".
+      - Card match GIỮ NGUYÊN kiểu thật (shadcn Card trắng): Badge loại kèo (4 màu soft),
+        chip live/play-time, skill+field badges, area line, note, footer "Xem chi tiết".
+
+      NOTE: đây chỉ là mock visual để duyệt, KHÔ phải code production.
+    -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: "#15803d",
+              "brand-hover": "#166534",
+              "brand-bright": "#16a34a",
+              "brand-soft": "#dcfce7",
+              spotlight: "#1a531a",
+              "spotlight-800": "#144014",
+              lime: "#ccff00",
+              "lime-ink": "#144014",
+              yellow: "#fbc02d",
+              ink: "#111827",
+              "ink-muted": "#6b7280",
+              "ink-subtle": "#9ca3af",
+              surface: "#ffffff",
+              "surface-muted": "#f9fafb",
+              line: "#e5e7eb",
+              "type-opponent": "#b91c1c",
+              "type-players": "#b45309",
+              "type-field": "#047857",
+              "type-team": "#7c3aed",
+              "type-opponent-soft": "#fee2e2",
+              "type-players-soft": "#fef3c7",
+              "type-field-soft": "#d1fae5",
+              "type-team-soft": "#ede9fe",
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      @layer components {
+        /* Hexagonal mesh — overlay mờ trên nền spotlight (giống header thật). */
+        .hex-bg {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.06' stroke-width='1.2'%3E%3Cpath d='M28 0L56 16.18V49.5L28 65.7 0 49.5V16.18zM28 65.7L56 81.9V100H0V81.9z'/%3E%3C/g%3E%3C/svg%3E");
+          background-size: 56px 100px;
+        }
+
+        /* Hero: ảnh nền + scrim gradient spotlight (tối dần xuống đáy cho tiêu đề đọc được). */
+        .hero {
+          background-image:
+            linear-gradient(
+              to bottom,
+              rgba(20, 64, 20, 0.45) 0%,
+              rgba(20, 64, 20, 0.70) 60%,
+              rgba(20, 64, 20, 0.94) 100%
+            ),
+            url("./home_bg.jpg");
+          background-size: cover;
+          background-position: center;
+        }
+
+        /* Card match — đúng kiểu thật: shadcn Card trắng, rounded-2xl, border nhẹ, p-4, stack dọc gap-2. */
+        .match-card {
+          @apply rounded-2xl bg-white p-4 shadow-sm border border-black/5;
+        }
+
+        /* Badge loại kèo — dùng màu soft + text màu spotlight (khớp matchTypeBadge trong card-shared). */
+        .type-badge {
+          @apply inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold;
+        }
+
+        /* Chip live (lime, chữ tối) — cho status MATCHED/CONFIRMED (DESIGN.md spotlight). */
+        .live-chip {
+          @apply inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-xs font-bold text-lime-ink;
+        }
+
+        /* Badge secondary (fieldType, skillTiers, hasField proxy). */
+        .badge-sec {
+          @apply inline-flex items-center rounded-md bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-ink-muted border border-line;
+        }
+
+        .pill-filter {
+          @apply inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-semibold text-ink-muted hover:border-brand hover:text-brand;
+        }
+      }
+    </style>
+  </head>
+
+  <body class="bg-surface-muted font-sans text-ink antialiased">
+    <div class="mx-auto max-w-md min-h-dvh bg-surface-muted">
+
+      <!-- ===== Sticky Header (gọn: chỉ logo + tên + đăng nhập) ===== -->
+      <header class="spotlight hex-bg sticky top-0 z-20">
+        <div class="flex items-center justify-between px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="h-10 w-10 shrink-0 rounded-full bg-white grid place-items-center text-xl">⚽</div>
+            <span class="text-lg font-extrabold tracking-tight text-white">Ráp Kèo</span>
+          </div>
+          <button class="text-sm font-medium text-white/80 hover:text-white">Đăng nhập</button>
+        </div>
+      </header>
+
+      <!-- ===== HERO BANNER (chỉ: ảnh bg + scrim + tiêu đề + tagline) ===== -->
+      <section class="hero hex-bg px-4 pt-8 pb-10 text-white">
+        <h1 class="text-3xl font-extrabold tracking-tight leading-tight">RÁP KÈO</h1>
+        <p class="mt-1 text-sm text-white/85">Tìm đối · Tìm người · Tìm sân</p>
+      </section>
+
+      <!-- ===== Filter (pill popover kiểu thật) ===== -->
+      <div class="bg-surface-muted -mt-3 rounded-t-2xl px-4 pt-4 pb-2">
+        <button class="pill-filter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="7" y1="12" x2="17" y2="12" />
+            <line x1="10" y1="18" x2="14" y2="18" />
+          </svg>
+          Bộ lọc
+        </button>
+      </div>
+
+      <!-- ===== Match list: card GIỮ NGUYÊN kiểu thật (theo default-match-card + card-shared) ===== -->
+      <main class="px-4 py-3 flex flex-col gap-3">
+
+        <!-- NEED_PLAYERS — Badge cam soft, skill+field+hasField, area, note, footer -->
+        <article class="match-card flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="type-badge bg-type-players-soft text-type-players">Thiếu người</span>
+            <span class="live-chip">
+              <span class="h-1.5 w-1.5 rounded-full bg-lime-ink animate-pulse"></span>
+              18:00
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <span class="badge-sec">Sân 7</span>
+            <span class="badge-sec">Trung bình</span>
+            <span class="badge-sec">Chưa có sân</span>
+          </div>
+          <p class="flex items-center gap-1.5 text-sm text-ink-muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="color:#15803d">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Phú Nhuận<span class="text-ink-subtle"> · Sân cỏ nhân tạo PN</span></span>
+          </p>
+          <p class="line-clamp-2 text-sm text-foreground">Đội An Phú thiếu 2 người (1 thủ môn + 1 line), anh em nào rảnh ráp kèo nhé.</p>
+          <div class="flex items-center justify-between border-t border-line pt-2">
+            <p class="text-xs text-ink-muted">An Phú FC</p>
+            <a href="#" class="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover hover:underline">
+              Xem chi tiết
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- FIELD_AVAILABLE — Badge xanh ngọc soft, đã có sân -->
+        <article class="match-card flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="type-badge bg-type-field-soft text-type-field">Đặt sân</span>
+            <span class="text-base font-bold text-ink">CN 18:00</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <span class="badge-sec">Sân 7</span>
+            <span class="badge-sec">Mới vào</span>
+            <span class="type-badge bg-type-field-soft text-type-field">Đã có sân</span>
+          </div>
+          <p class="flex items-center gap-1.5 text-sm text-ink-muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="color:#15803d">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Tân Bình<span class="text-ink-subtle"> · Sân xanh Tân Bình</span></span>
+          </p>
+          <p class="line-clamp-2 text-sm text-foreground">Sân trống 18:00 Chủ Nhật, miễn phí ghép, ổn cho mấy đội muốn giao lưu.</p>
+          <div class="flex items-center justify-between border-t border-line pt-2">
+            <p class="text-xs text-ink-muted">Quản sân Tân Bình</p>
+            <a href="#" class="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover hover:underline">
+              Xem chi tiết
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- FIND_OPPONENT — Badge đỏ soft, đang LIVE -->
+        <article class="match-card flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="type-badge bg-type-opponent-soft text-type-opponent">Tìm đối</span>
+            <span class="live-chip">
+              <span class="h-1.5 w-1.5 rounded-full bg-lime-ink animate-pulse"></span>
+              19:30 đang đá
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <span class="badge-sec">Sân 5</span>
+            <span class="badge-sec">Khá cao</span>
+            <span class="type-badge bg-type-field-soft text-type-field">Đã có sân</span>
+          </div>
+          <p class="flex items-center gap-1.5 text-sm text-ink-muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="color:#15803d">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Quận 7<span class="text-ink-subtle"> · Sân đấu Q7</span></span>
+          </p>
+          <p class="line-clamp-2 text-sm text-foreground">Cần 1 đội đối thủ gấp, mỗi bên 5 người, đã xác nhận sân.</p>
+          <div class="flex items-center justify-between border-t border-line pt-2">
+            <p class="text-xs text-ink-muted">U30 Quận 7</p>
+            <a href="#" class="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover hover:underline">
+              Xem chi tiết
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
+          </div>
+        </article>
+
+        <div class="h-20"></div>
+      </main>
+
+      <!-- FAB — MyMatchFab (kèo của bạn đang mở) -->
+      <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[min(20rem,calc(100vw-2rem))]">
+        <button class="w-full rounded-full bg-brand px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand/30 flex items-center justify-center gap-2 hover:bg-brand-hover">
+          <span class="h-2 w-2 rounded-full bg-lime animate-pulse"></span>
+          Kèo của bạn đang mở · xem trạng thái
+        </button>
+      </div>
+
+    </div>
+  </body>
+</html>
