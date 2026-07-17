@@ -4,15 +4,29 @@ import type { ReactNode } from "react";
 import { signOut } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/session";
 import { AdminForgotPasswordListener } from "@/features/notifications/components/admin-forgot-password-listener";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import {
+  listNotifications,
+  countUnreadNotifications,
+} from "@/features/notifications/queries";
 
 export default async function MainLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  // Nav gộp trên hero: đã đăng nhập -> nút "Đăng xuất"; chưa đăng nhập -> link "Đăng nhập".
+  // Nav gộp trên hero: đã đăng nhập -> chuông thông báo + nút "Đăng xuất";
+  // chưa đăng nhập -> link "Đăng nhập".
   // Trang /matches là public nên layout không được giả định user luôn tồn tại.
   const user = await getCurrentUser();
+
+  // Chỉ nạp thông báo khi đã đăng nhập (dropdown chuông render sẵn từ server).
+  const [notifications, unreadCount] = user
+    ? await Promise.all([
+        listNotifications(user.id),
+        countUnreadNotifications(user.id),
+      ])
+    : [[], 0];
 
   return (
     <div className="min-h-dvh bg-surface-muted">
@@ -37,20 +51,26 @@ export default async function MainLayout({
             </span>
           </Link>
           {user ? (
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/matches" });
-              }}
-            >
-              <button
-                type="submit"
-                className="text-sm font-medium text-white/80 hover:text-white"
-                title={user.email ?? undefined}
+            <div className="flex items-center gap-1.5">
+              <NotificationBell
+                initialItems={notifications}
+                initialUnread={unreadCount}
+              />
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/matches" });
+                }}
               >
-                Đăng xuất
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="text-sm font-medium text-white/80 hover:text-white"
+                  title={user.email ?? undefined}
+                >
+                  Đăng xuất
+                </button>
+              </form>
+            </div>
           ) : (
             <Link
               href="/login"

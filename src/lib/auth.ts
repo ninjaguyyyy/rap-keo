@@ -9,6 +9,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/features/auth/schemas";
+import type { UserRole } from "@/generated/prisma/enums";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -58,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id?: string;
             email?: string | null;
             name?: string | null;
-            role?: string;
+            role?: UserRole;
           };
         };
 
