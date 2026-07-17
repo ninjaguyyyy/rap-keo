@@ -6,6 +6,7 @@ import type {
   MatchType,
 } from "@/generated/prisma/enums";
 import type { MatchRequestStatus } from "@/generated/prisma/enums";
+import { baseSkillTierLabels } from "@/lib/skill-labels";
 
 export const matchTypeLabels: Record<MatchType, string> = {
   FIND_OPPONENT: "Tìm đối",
@@ -20,15 +21,10 @@ export const fieldTypeLabels: Record<FieldType, string> = {
   F11: "Sân 11",
 };
 
-// Dùng chung cho cả Match (có ANY) lẫn Team (7 mức, không ANY). Thứ tự yếu -> mạnh.
+// Nhãn trình độ cho Match: 7 mức chung (baseSkillTierLabels) + ANY (mọi trình độ).
+// baseSkillTierLabels là nguồn duy nhất (dùng chung với Team) — xem @/lib/skill-labels.
 export const skillTierLabels: Record<MatchSkillTier, string> = {
-  VERY_WEAK: "Siêu Yếu",
-  WEAK: "Yếu",
-  BELOW_AVERAGE: "Trung Bình Yếu",
-  AVERAGE: "Trung Bình",
-  ABOVE_AVERAGE: "Trung Bình Khá",
-  GOOD: "Khá",
-  STRONG: "Mạnh",
+  ...baseSkillTierLabels,
   ANY: "Mọi trình độ",
 };
 

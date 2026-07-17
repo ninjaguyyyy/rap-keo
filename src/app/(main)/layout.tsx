@@ -51,7 +51,13 @@ export default async function MainLayout({
             </span>
           </Link>
           {user ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/teams"
+                className="text-sm font-medium text-white/80 hover:text-white"
+              >
+                Đội
+              </Link>
               <NotificationBell
                 initialItems={notifications}
                 initialUnread={unreadCount}
