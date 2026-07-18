@@ -10,8 +10,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Image postgis/postgis tự bật sẵn các extension này; khai báo đủ để Prisma không báo drift.
-  // App chỉ thực sự dùng `postgis` (geography + ST_DWithin/ST_Distance).
+  // Connection URLs (DATABASE_URL runtime, DIRECT_URL migrate) cấu hình trong
+  // prisma.config.ts (Prisma 7: datasource không còn hỗ trợ url/directUrl trực tiếp).
+  // App dùng `postgis` (geography + ST_DWithin/ST_Distance).
   extensions = [postgis, postgis_topology, postgis_tiger_geocoder, fuzzystrmatch]
 }
 
@@ -151,6 +152,8 @@ model Team {
   // geography(Point, 4326) — gán/đọc qua raw SQL
   location  Unsupported("geography(Point, 4326)")?
   logoUrl   String?   @map("logo_url")
+  // Ảnh bìa đội (URL public từ Supabase Storage bucket team-assets). Nullable: mặc định.
+  coverUrl  String?   @map("cover_url")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 

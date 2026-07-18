@@ -36,9 +36,9 @@ export default async function TeamLayout({
     <div className="min-h-dvh bg-surface-muted">
       {/* Header = ảnh bìa đội full-bleed + scrim + hex overlay + crest/tên/khu vực. */}
       <header className="relative w-full overflow-hidden">
-        {/* Ảnh bìa đội. TODO: thêm cột cover_url cho đội -> thay src theo team. */}
+        {/* Ảnh bìa đội. coverUrl = ảnh upload (Supabase Storage), fallback mặc định. */}
         <Image
-          src="/team_detail_bg.webp"
+          src={team.coverUrl ?? "/team_detail_bg.webp"}
           alt=""
           fill
           priority

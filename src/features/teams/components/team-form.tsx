@@ -31,7 +31,13 @@ const SKILL_OPTIONS = Object.entries(teamSkillTierLabels) as [SkillTier, string]
 const AREA_OPTIONS = Object.values(areaLabels);
 
 type TeamFormProps = {
-  team?: { id: string; name: string; skillTier: SkillTier; homeArea?: string | null };
+  team?: {
+    id: string;
+    name: string;
+    skillTier: SkillTier;
+    homeArea?: string | null;
+    coverUrl?: string | null;
+  };
   action?: (prev: TeamFormState, formData: FormData) => Promise<TeamFormState>;
   onSuccess?: () => void;
 };
@@ -131,6 +137,29 @@ export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
           </p>
         ) : null}
       </div>
+
+      {/* Ảnh bìa (tùy chọn, chỉ sửa). Native <input type="file"> trong <form action>
+          -> Next.js server action nhận File tự động qua formData.get("cover"). */}
+      {team ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="team-cover">
+            Ảnh bìa{" "}
+            <span className="font-normal text-ink-subtle">(tùy chọn, tối đa 5MB)</span>
+          </Label>
+          {team.coverUrl ? (
+            <p className="text-xs text-ink-subtle">
+              Đã có ảnh bìa. Chọn ảnh mới để thay.
+            </p>
+          ) : null}
+          <Input
+            id="team-cover"
+            name="cover"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Chọn ảnh bìa"
+          />
+        </div>
+      ) : null}
 
       {/* Lỗi chung */}
       {state.error ? (

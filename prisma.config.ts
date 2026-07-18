@@ -8,8 +8,13 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  // Prisma 7: mọi connection URL đặt trong config, KHÔNG khai báo url/directUrl
+  // trong schema.prisma nữa. URL ưu tiên theo thứ tự:
+  //   - url: runtime app (pooler transaction-mode, port 6543, pgbouncer=true).
+  //   - directUrl: `prisma migrate deploy` cần session dài (pooler session-mode, 5432).
+  // shadowDatabaseUrl chỉ cần khi tạo migration mới (`migrate dev`).
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
     shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

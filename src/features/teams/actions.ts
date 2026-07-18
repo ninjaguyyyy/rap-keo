@@ -10,6 +10,11 @@ import {
   type AddMemberState,
 } from "./schemas";
 import { TeamRole } from "@/generated/prisma/enums";
+import { uploadTeamCover, deleteTeamCover } from "@/lib/supabase-storage";
+
+// Giới hạn upload ảnh bìa: loại MIME + dung lượng tối đa (5MB).
+const COVER_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
 
 // Kết quả chung cho action đơn (deleteTeam) — mirror MatchActionState.
 export type TeamActionState = { ok?: true; error?: string };
@@ -88,10 +93,10 @@ export async function updateTeam(
     return { fieldErrors: toFieldErrors(parsed.error.issues) };
   }
 
-  // Ownership check: đội tồn tại + user là chủ.
+  // Ownership check: đội tồn tại + user là chủ. Lấy cả coverUrl cũ để xoá khi thay.
   const existing = await db.team.findUnique({
     where: { id: teamId },
-    select: { ownerId: true },
+    select: { ownerId: true, coverUrl: true },
   });
   if (!existing) return { error: "Đội không tồn tại." };
   if (existing.ownerId !== user.id) {
@@ -100,10 +105,39 @@ export async function updateTeam(
 
   const { name, skillTier, homeArea } = parsed.data;
 
+  // Upload ảnh bìa (tùy chọn): chỉ xử lý khi user chọn file mới.
+  // formData.get("cover") trả File (nếu có chọn) hoặc chuỗi rỗng (không chọn).
+  const coverEntry = formData.get("cover");
+  let coverUrl: string | undefined;
+  if (coverEntry instanceof File && coverEntry.size > 0) {
+    if (!COVER_ALLOWED_TYPES.includes(coverEntry.type)) {
+      return { error: "Chỉ nhận ảnh JPG, PNG hoặc WebP." };
+    }
+    if (coverEntry.size > COVER_MAX_BYTES) {
+      return { error: "Ảnh bìa tối đa 5MB." };
+    }
+    try {
+      const { publicUrl } = await uploadTeamCover(coverEntry, teamId);
+      coverUrl = publicUrl;
+      // Xoá ảnh bìa cũ (nếu có) để tiết kiệm storage. Best-effort.
+      if (existing.coverUrl) {
+        await deleteTeamCover(existing.coverUrl);
+      }
+    } catch (err) {
+      console.error("uploadTeamCover error:", err);
+      return { error: "Không tải được ảnh bìa. Thử lại nhé." };
+    }
+  }
+
   try {
     await db.team.update({
       where: { id: teamId },
-      data: { name, skillTier, homeArea: homeArea || null },
+      data: {
+        name,
+        skillTier,
+        homeArea: homeArea || null,
+        ...(coverUrl ? { coverUrl } : {}),
+      },
     });
     revalidatePath("/teams");
     // /teams/[id] là segment động, revalidatePath("/teams") không cover -> revalidate riêng.

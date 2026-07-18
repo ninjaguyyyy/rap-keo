@@ -19,7 +19,13 @@ import type { SkillTier } from "@/generated/prisma/enums";
 export function EditTeamDialog({
   team,
 }: {
-  team: { id: string; name: string; skillTier: SkillTier; homeArea?: string | null };
+  team: {
+    id: string;
+    name: string;
+    skillTier: SkillTier;
+    homeArea?: string | null;
+    coverUrl?: string | null;
+  };
 }) {
   const [open, setOpen] = useState(false);
 
