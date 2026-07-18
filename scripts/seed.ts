@@ -58,10 +58,25 @@ async function main() {
   // --- Dọn dữ liệu demo cũ ---
   const existing = await db.user.findUnique({ where: { email: DEMO_EMAIL } });
   if (existing) {
+    // Xóa request trước (FK match) rồi match/field/team/user.
+    await db.matchRequest.deleteMany({
+      where: { match: { creatorId: existing.id } },
+    });
     await db.match.deleteMany({ where: { creatorId: existing.id } });
     await db.field.deleteMany({ where: { ownerId: existing.id } });
     await db.team.deleteMany({ where: { ownerId: existing.id } });
     await db.user.delete({ where: { id: existing.id } });
+  }
+  // Dọn đối thủ demo (nếu có) — email cố định.
+  const existingOpponent = await db.user.findUnique({
+    where: { email: "opponent@rapkeo.vn" },
+  });
+  if (existingOpponent) {
+    await db.matchRequest.deleteMany({
+      where: { requesterId: existingOpponent.id },
+    });
+    await db.team.deleteMany({ where: { ownerId: existingOpponent.id } });
+    await db.user.delete({ where: { id: existingOpponent.id } });
   }
 
   // --- Admin user (role ADMIN) — dùng cho AI parse text tạo kèo ---
@@ -106,13 +121,28 @@ async function main() {
     ownerId: user.id,
   });
 
+  // --- Đối thủ mẫu (cho Previous games + request ACCEPTED) ---
+  const opponentUser = await db.user.create({
+    data: { email: "opponent@rapkeo.vn", name: "Đội trưởng Đối thủ" },
+  });
+  const opponentTeam = await db.team.create({
+    data: {
+      name: "FC Đối Thủ",
+      ownerId: opponentUser.id,
+      skillTier: "GOOD",
+      homeArea: "Thanh Xuân, Hà Nội",
+      members: { create: { userId: opponentUser.id, role: "OWNER" } },
+    },
+  });
+
   // --- Matches ---
   // Lưu ý: MVP form tạo kèo chỉ chọn `area` (4 sân cố định), không gắn fieldId
   // cụ thể (field picker là task sau). Seed cũng không gắn fieldId cho kèo nào
   // để card hiển thị "Chưa có sân" đúng ngữ nghĩa — trừ khi muốn test kèo đã có
   // sân cụ thể (entity Field riêng).
-  await db.match.createMany({
+  const matches = await db.match.createManyAndReturn({
     data: [
+      // Kèo sắp tới (next match): 1 ngày sau, 18:30, chưa ghép đối.
       {
         creatorId: user.id,
         teamId: team.id,
@@ -120,10 +150,49 @@ async function main() {
         fieldType: "F7",
         skillTiers: ["ABOVE_AVERAGE", "GOOD"],
         area: "trung_tam",
-        // Nhiều giờ trong 1 ngày (18h30 + 20h30).
-        playTimes: [vnDateTime(1, "18:30"), vnDateTime(1, "20:30")],
+        playTimes: [vnDateTime(1, "18:30")],
         note: "Tìm đối giao hữu sân 7, fair-play.",
       },
+      // Trận đã đá: thắng (homeScore 3 - awayScore 1), có request ACCEPTED từ opponentTeam.
+      {
+        creatorId: user.id,
+        teamId: team.id,
+        matchType: "FIND_OPPONENT",
+        fieldType: "F7",
+        skillTiers: ["AVERAGE", "ABOVE_AVERAGE"],
+        area: "da_phuoc",
+        playTimes: [vnDateTime(-3, "19:30")],
+        status: "COMPLETED",
+        homeScore: 3,
+        awayScore: 1,
+      },
+      // Trận đã đá: hòa (2-2), ACCEPTED từ opponentTeam.
+      {
+        creatorId: user.id,
+        teamId: team.id,
+        matchType: "FIND_OPPONENT",
+        fieldType: "F5",
+        skillTiers: ["WEAK", "BELOW_AVERAGE"],
+        area: "hong_phuc",
+        playTimes: [vnDateTime(-7, "20:30")],
+        status: "COMPLETED",
+        homeScore: 2,
+        awayScore: 2,
+      },
+      // Trận đã đá: thua (1-4), ACCEPTED từ opponentTeam.
+      {
+        creatorId: user.id,
+        teamId: team.id,
+        matchType: "FIND_OPPONENT",
+        fieldType: "F11",
+        skillTiers: ["GOOD", "STRONG"],
+        area: "trung_tam",
+        playTimes: [vnDateTime(-14, "17:30")],
+        status: "COMPLETED",
+        homeScore: 1,
+        awayScore: 4,
+      },
+      // Kèo cũ hơn của team (không COMPLETED) — dùng để test listMatches/filter.
       {
         creatorId: user.id,
         teamId: team.id,
@@ -148,17 +217,6 @@ async function main() {
       },
       {
         creatorId: user.id,
-        teamId: team.id,
-        matchType: "FIND_OPPONENT",
-        fieldType: "F7",
-        skillTiers: ["STRONG", "GOOD"],
-        area: "hong_phuc",
-        // Sáng sớm: 2 slot 30 phút.
-        playTimes: [vnDateTime(3, "05:00"), vnDateTime(3, "06:30")],
-        note: "Tìm đối trình mạnh, đá sáng cuối tuần.",
-      },
-      {
-        creatorId: user.id,
         // Không gắn teamId — cá nhân rảnh tìm đội.
         matchType: "LOOKING_FOR_TEAM",
         fieldType: "F7",
@@ -178,6 +236,18 @@ async function main() {
         note: "[2 cầu rảnh] 2 anh em rảnh, tìm đội nhận đá nội bộ hoặc kèo.",
       },
     ],
+  });
+
+  // Tạo MatchRequest ACCEPTED cho 3 trận COMPLETED (để resolve đối thủ opponentTeam).
+  const completed = matches.filter((m) => m.status === "COMPLETED");
+  await db.matchRequest.createMany({
+    data: completed.map((m) => ({
+      matchId: m.id,
+      requesterId: opponentUser.id,
+      requesterTeamId: opponentTeam.id,
+      status: "ACCEPTED",
+      message: "Đồng ý kèo",
+    })),
   });
 
   const count = await db.match.count();

@@ -1,6 +1,7 @@
 // Zod schema cho form tạo/sửa đội. Enum validate chặt theo Prisma SkillTier (7 mức, no ANY).
 import { z } from "zod";
 import { SkillTier } from "@/generated/prisma/enums";
+import { phoneSchema } from "@/features/auth/schemas";
 
 // Trình độ đội: đúng 7 mức của SkillTier (khác Match — Match có thêm ANY).
 export const teamSkillTierEnum = z.enum([
@@ -32,3 +33,20 @@ export type TeamFormState = {
   error?: string;
   fieldErrors?: Partial<Record<keyof CreateTeamInput, string>>;
 };
+
+// Thêm thành viên: nhập SĐT tìm user đã đăng ký. teamId đi qua hidden input.
+// phoneSchema (regex VN /^0\d{9,10}$/) tái dùng từ auth.
+export const addMemberSchema = z.object({
+  teamId: z.string().uuid(),
+  phone: phoneSchema,
+});
+
+export type AddMemberInput = z.infer<typeof addMemberSchema>;
+
+// State cho useActionState của addMember: chỉ có fieldError cho phone (+ teamId ẩn).
+export type AddMemberState = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<keyof AddMemberInput, string>>;
+};
+

@@ -1,6 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { getTeamById } from "@/features/teams/queries";
+import {
+  getTeamById,
+  getTeamNextMatch,
+  getTeamRecentMatches,
+  listTeamMembers,
+  getTeamLeaderboard,
+} from "@/features/teams/queries";
 import { TeamDetailTabs } from "@/features/teams/components/team-detail-tabs";
 
 // Trang chi tiết đội /teams/[id]. Header (ảnh bìa + crest + tên) render ở layout;
@@ -23,5 +29,22 @@ export default async function TeamDetailPage({
     notFound();
   }
 
-  return <TeamDetailTabs team={team} canManage={team.ownerId === user.id} />;
+  // Kèo sắp tới + các trận đã đá + thành viên + leaderboard (chạy song song).
+  const [nextMatch, recentMatches, members, leaderboard] = await Promise.all([
+    getTeamNextMatch(id),
+    getTeamRecentMatches(id),
+    listTeamMembers(id),
+    getTeamLeaderboard(id),
+  ]);
+
+  return (
+    <TeamDetailTabs
+      team={team}
+      canManage={team.ownerId === user.id}
+      nextMatch={nextMatch}
+      recentMatches={recentMatches}
+      members={members}
+      leaderboard={leaderboard}
+    />
+  );
 }

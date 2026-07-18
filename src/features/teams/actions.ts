@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { createTeamSchema, type TeamFormState } from "./schemas";
+import {
+  createTeamSchema,
+  addMemberSchema,
+  type TeamFormState,
+  type AddMemberState,
+} from "./schemas";
 import { TeamRole } from "@/generated/prisma/enums";
 
 // Kết quả chung cho action đơn (deleteTeam) — mirror MatchActionState.
@@ -132,5 +137,113 @@ export async function deleteTeam(teamId: string): Promise<TeamActionState> {
   } catch (err) {
     console.error("deleteTeam error:", err);
     return { error: "Không xóa được đội. Thử lại nhé." };
+  }
+}
+
+// Kiểm tra user hiện tại là chủ của team. Trả team hoặc error (mirror ownership
+// check trong updateTeam/deleteTeam). Dùng chung cho add/remove member.
+async function getOwnedTeam(
+  teamId: string,
+  userId: string,
+): Promise<{ error: string } | { teamId: string }> {
+  const team = await db.team.findUnique({
+    where: { id: teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== userId) return { error: "Bạn không có quyền quản lý đội này." };
+  return { teamId };
+}
+
+// Thêm thành viên: owner nhập SĐT -> tìm user đã đăng ký -> thêm role MEMBER.
+// useActionState signature. Lỗi user không tồn tại / đã là member -> fieldError phone.
+export async function addTeamMember(
+  _prev: AddMemberState,
+  formData: FormData,
+): Promise<AddMemberState> {
+  const user = await requireUser();
+
+  const parsed = addMemberSchema.safeParse({
+    teamId: formData.get("teamId"),
+    phone: formData.get("phone"),
+  });
+  if (!parsed.success) {
+    const fieldErrors: NonNullable<AddMemberState["fieldErrors"]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string") {
+        const fieldKey = key as keyof NonNullable<AddMemberState["fieldErrors"]>;
+        if (!fieldErrors[fieldKey]) fieldErrors[fieldKey] = issue.message;
+      }
+    }
+    return { fieldErrors };
+  }
+
+  const { teamId, phone } = parsed.data;
+  const owned = await getOwnedTeam(teamId, user.id);
+  if ("error" in owned) return { error: owned.error };
+
+  // Tìm user theo SĐT (User.phone @unique). Google-only user (phone null) không match.
+  const target = await db.user.findUnique({ where: { phone } });
+  if (!target) {
+    return { fieldErrors: { phone: "Không tìm thấy người dùng với số này." } };
+  }
+
+  // Không cho tự thêm chính mình (đã là owner).
+  if (target.id === user.id) {
+    return { fieldErrors: { phone: "Bạn đã là đội trưởng của đội." } };
+  }
+
+  // Đã là thành viên? (@@unique([teamId, userId]) -> findUnique compound).
+  const existing = await db.teamMember.findUnique({
+    where: { teamId_userId: { teamId, userId: target.id } },
+    select: { id: true },
+  });
+  if (existing) {
+    return { fieldErrors: { phone: "Thành viên đã có trong đội." } };
+  }
+
+  try {
+    await db.teamMember.create({
+      data: { teamId, userId: target.id, role: TeamRole.MEMBER },
+    });
+    revalidatePath(`/teams/${teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("addTeamMember error:", err);
+    return { error: "Không thêm được thành viên. Thử lại nhé." };
+  }
+}
+
+// Xóa thành viên (single-arg, useTransition — mirror deleteTeam). Không cho xóa
+// owner (chỉ chuyển quyền chủ đội mới xóa được — task sau). Chỉ chủ đội được xóa.
+export async function removeTeamMember(args: {
+  teamId: string;
+  userId: string;
+}): Promise<TeamActionState> {
+  const user = await requireUser();
+  const { teamId, userId } = args;
+
+  const team = await db.team.findUnique({
+    where: { id: teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Bạn không có quyền quản lý đội này." };
+  }
+  if (userId === team.ownerId) {
+    return { error: "Không thể xóa đội trưởng khỏi đội." };
+  }
+
+  try {
+    await db.teamMember.delete({
+      where: { teamId_userId: { teamId, userId } },
+    });
+    revalidatePath(`/teams/${teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("removeTeamMember error:", err);
+    return { error: "Không xóa được thành viên. Thử lại nhé." };
   }
 }

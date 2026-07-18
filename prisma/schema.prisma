@@ -114,6 +114,8 @@ model User {
   createdMatches  Match[]
   matchRequests   MatchRequest[]
   notifications   Notification[]
+  // Vua phá lưới / kiến tạo: mỗi user có nhiều dòng PlayerStat (1 trận / 1 đội).
+  playerStats     PlayerStat[]
 
   @@map("users")
 }
@@ -156,6 +158,8 @@ model Team {
   members          TeamMember[]
   matches          Match[]
   requestsFromTeam MatchRequest[]
+  // Bảng PlayerStat của đội (per-match, per-player) -> aggregate leaderboard.
+  playerStats      PlayerStat[]
 
   @@index([ownerId])
   @@map("teams")
@@ -208,6 +212,10 @@ model Match {
   playTimes   DateTime[]                             @map("play_times")
   note        String?
   status      MatchStatus                            @default(OPEN)
+  // Tỷ số trận (ghi khi trận COMPLETED). home = đội tạo/đại diện kèo (teamId),
+  // away = đội khách (resolve từ request ACCEPTED). Nullable: chưa đá / chưa chốt.
+  homeScore   Int?                                   @map("home_score")
+  awayScore   Int?                                   @map("away_score")
   createdAt   DateTime                               @default(now()) @map("created_at")
   updatedAt   DateTime                               @updatedAt @map("updated_at")
 
@@ -215,6 +223,8 @@ model Match {
   team     Team?          @relation(fields: [teamId], references: [id])
   field    Field?         @relation(fields: [fieldId], references: [id])
   requests MatchRequest[]
+  // Bàn thắng / kiến tạo của từng cầu thủ trong trận (ghi khi COMPLETED).
+  playerStats PlayerStat[]
 
   @@index([creatorId])
   @@index([teamId])
@@ -254,4 +264,26 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// Số liệu cầu thủ trong 1 trận: bàn thắng / kiến tạo. Per-match, per-team, per-player.
+// Khóa (matchId, userId): 1 cầu thủ 1 dòng/trận. teamId = đội mà cầu thủ ghi bàn
+// (denormalize từ membership tại thời điểm ghi) -> aggregate leaderboard theo team.
+// Cascade theo match (xóa trận -> xóa stat); user/team xóa -> cascade stat.
+model PlayerStat {
+  id      String @id @default(uuid()) @db.Uuid
+  matchId String @map("match_id") @db.Uuid
+  teamId  String @map("team_id") @db.Uuid
+  userId  String @map("user_id") @db.Uuid
+  goals   Int    @default(0)
+  assists Int    @default(0)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("player_stats")
 }

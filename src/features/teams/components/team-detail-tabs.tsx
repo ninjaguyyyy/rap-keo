@@ -1,17 +1,29 @@
 "use client";
 
 // Tabs trên trang chi tiết đội /teams/[id]. Dùng Tabs component (underline style,
-// gạch chân vàng ở tab active) theo mẫu team detail. Chỉ tab "Tổng quan" có nội
-// dung; Đội hình / Lịch đấu / Bảng là placeholder "Sắp có".
+// gạch chân vàng ở tab active) theo mẫu team detail. Tab "Tổng quan" có Next match
+// + Previous games + info đội; Đội hình / Lịch đấu / Bảng là placeholder "Sắp có".
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "@/components/ui/tabs";
 import { MapPinIcon } from "@/features/matches/components/card-shared";
 import { teamSkillTierLabels } from "../labels";
-import type { TeamDetail } from "../queries";
+import type {
+  TeamDetail,
+  TeamMatchItem,
+  TeamRecentMatch,
+  TeamMemberItem,
+  LeaderboardRow,
+} from "../queries";
 import { EditTeamDialog } from "./edit-team-dialog";
 import { DeleteTeamButton } from "./delete-team-button";
+import {
+  NextMatchCard,
+  PreviousGamesCard,
+} from "./team-match-cards";
+import { MemberList } from "./member-list";
+import { LeaderboardCard } from "./leaderboard-card";
 
 type TabId = "overview" | "squad" | "matches" | "table";
 
@@ -23,18 +35,25 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 // Subtext cho từng tab placeholder.
-const COMING_SOON_TEXT: Record<Exclude<TabId, "overview">, string> = {
+const COMING_SOON_TEXT: Record<Exclude<TabId, "overview" | "squad">, string> = {
   table: "Bảng xếp hạng đang được xây dựng.",
-  squad: "Đội hình sẽ có khi thêm quản lý thành viên.",
   matches: "Lịch đấu sẽ có khi gắn đội vào kèo.",
 };
 
 export function TeamDetailTabs({
   team,
   canManage,
+  nextMatch,
+  recentMatches,
+  members,
+  leaderboard,
 }: {
   team: TeamDetail;
   canManage: boolean;
+  nextMatch: TeamMatchItem | null;
+  recentMatches: TeamRecentMatch[];
+  members: TeamMemberItem[];
+  leaderboard: LeaderboardRow[];
 }) {
   const router = useRouter();
 
@@ -48,8 +67,12 @@ export function TeamDetailTabs({
         ))}
       </TabsList>
 
-      {/* Tổng quan: thông tin đội trong card, kèm action nếu là chủ đội. */}
+      {/* Tổng quan: Next match + Previous games + info đội. */}
       <TabsPanel value="overview" className="flex flex-col gap-4">
+        <NextMatchCard match={nextMatch} teamName={team.name} />
+        <PreviousGamesCard matches={recentMatches} />
+
+        {/* Card thông tin đội (skill, khu vực, chủ đội) + action. */}
         <Card className="gap-0 p-0">
           <div className="flex flex-col gap-3 p-4">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -88,7 +111,18 @@ export function TeamDetailTabs({
 
       {(["table", "squad", "matches"] as const).map((id) => (
         <TabsPanel key={id} value={id}>
-          <ComingSoonPanel text={COMING_SOON_TEXT[id]} />
+          {id === "squad" ? (
+            <div className="flex flex-col gap-4">
+              <MemberList
+                teamId={team.id}
+                members={members}
+                canManage={canManage}
+              />
+              <LeaderboardCard rows={leaderboard} />
+            </div>
+          ) : (
+            <ComingSoonPanel text={COMING_SOON_TEXT[id]} />
+          )}
         </TabsPanel>
       ))}
     </Tabs>
