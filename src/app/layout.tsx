@@ -1,3 +1,6 @@
+// Polyfills phải import ĐẦU TIÊN để chạy trước mọi client bundle / React hydrate
+// trên iOS Safari cũ (Base UI dùng Object.hasOwn — ES2022).
+import "@/lib/polyfills";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
