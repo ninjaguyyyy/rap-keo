@@ -6,10 +6,12 @@ import { requireUser } from "@/lib/session";
 import {
   createTeamSchema,
   addMemberSchema,
+  createTeamMatchSchema,
   type TeamFormState,
   type AddMemberState,
+  type CreateTeamMatchState,
 } from "./schemas";
-import { TeamRole } from "@/generated/prisma/enums";
+import { MatchType, TeamRole } from "@/generated/prisma/enums";
 import { uploadTeamCover, deleteTeamCover } from "@/lib/supabase-storage";
 
 // Giới hạn upload ảnh bìa: loại MIME + dung lượng tối đa (5MB).
@@ -189,8 +191,10 @@ async function getOwnedTeam(
   return { teamId };
 }
 
-// Thêm thành viên: owner nhập SĐT -> tìm user đã đăng ký -> thêm role MEMBER.
-// useActionState signature. Lỗi user không tồn tại / đã là member -> fieldError phone.
+// Thêm thành viên: 2 chế độ.
+// - mode "name": tạo user guest (isGuest=true, name-only) -> thêm role MEMBER.
+// - mode "phone": tìm user đã đăng ký theo SĐT -> thêm role MEMBER (flow cũ).
+// useActionState signature. Lỗi validate / user không tồn tại / đã là member -> fieldError.
 export async function addTeamMember(
   _prev: AddMemberState,
   formData: FormData,
@@ -199,45 +203,59 @@ export async function addTeamMember(
 
   const parsed = addMemberSchema.safeParse({
     teamId: formData.get("teamId"),
+    mode: formData.get("mode"),
+    name: formData.get("name"),
     phone: formData.get("phone"),
   });
   if (!parsed.success) {
     const fieldErrors: NonNullable<AddMemberState["fieldErrors"]> = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
-      if (typeof key === "string") {
-        const fieldKey = key as keyof NonNullable<AddMemberState["fieldErrors"]>;
-        if (!fieldErrors[fieldKey]) fieldErrors[fieldKey] = issue.message;
+      if (key === "name" || key === "phone") {
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
     }
     return { fieldErrors };
   }
 
-  const { teamId, phone } = parsed.data;
+  const { teamId, mode, name, phone } = parsed.data;
   const owned = await getOwnedTeam(teamId, user.id);
   if ("error" in owned) return { error: owned.error };
 
-  // Tìm user theo SĐT (User.phone @unique). Google-only user (phone null) không match.
-  const target = await db.user.findUnique({ where: { phone } });
-  if (!target) {
-    return { fieldErrors: { phone: "Không tìm thấy người dùng với số này." } };
-  }
-
-  // Không cho tự thêm chính mình (đã là owner).
-  if (target.id === user.id) {
-    return { fieldErrors: { phone: "Bạn đã là đội trưởng của đội." } };
-  }
-
-  // Đã là thành viên? (@@unique([teamId, userId]) -> findUnique compound).
-  const existing = await db.teamMember.findUnique({
-    where: { teamId_userId: { teamId, userId: target.id } },
-    select: { id: true },
-  });
-  if (existing) {
-    return { fieldErrors: { phone: "Thành viên đã có trong đội." } };
-  }
-
   try {
+    if (mode === "name") {
+      // Tạo user guest: chỉ tên, không SĐT/email/password -> không đăng nhập được.
+      // Guest có thể upgrade thành user thật sau (khi đăng ký SĐT) — giữ membership.
+      const guest = await db.user.create({
+        data: { name: name!, isGuest: true },
+      });
+      await db.teamMember.create({
+        data: { teamId, userId: guest.id, role: TeamRole.MEMBER },
+      });
+      revalidatePath(`/teams/${teamId}`);
+      return { ok: true };
+    }
+
+    // mode "phone": tìm user theo SĐT (User.phone @unique).
+    const target = await db.user.findUnique({ where: { phone: phone! } });
+    if (!target) {
+      return { fieldErrors: { phone: "Không tìm thấy người dùng với số này." } };
+    }
+
+    // Không cho tự thêm chính mình (đã là owner).
+    if (target.id === user.id) {
+      return { fieldErrors: { phone: "Bạn đã là đội trưởng của đội." } };
+    }
+
+    // Đã là thành viên? (@@unique([teamId, userId]) -> findUnique compound).
+    const existing = await db.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId: target.id } },
+      select: { id: true },
+    });
+    if (existing) {
+      return { fieldErrors: { phone: "Thành viên đã có trong đội." } };
+    }
+
     await db.teamMember.create({
       data: { teamId, userId: target.id, role: TeamRole.MEMBER },
     });
@@ -279,5 +297,94 @@ export async function removeTeamMember(args: {
   } catch (err) {
     console.error("removeTeamMember error:", err);
     return { error: "Không xóa được thành viên. Thử lại nhé." };
+  }
+}
+
+// Map lỗi zod -> fieldErrors cho createTeamMatch (first-wins per field).
+const TEAM_MATCH_FIELDS = [
+  "fieldType",
+  "playTime",
+  "area",
+  "opponentName",
+  "sideAName",
+  "sideBName",
+] as const;
+
+function toTeamMatchFieldErrors(
+  issues: { path: PropertyKey[]; message: string }[],
+): NonNullable<CreateTeamMatchState["fieldErrors"]> {
+  const fieldErrors: NonNullable<CreateTeamMatchState["fieldErrors"]> = {};
+  for (const issue of issues) {
+    const key = issue.path[0];
+    if (
+      typeof key === "string" &&
+      (TEAM_MATCH_FIELDS as readonly string[]).includes(key)
+    ) {
+      const fieldKey = key as keyof NonNullable<CreateTeamMatchState["fieldErrors"]>;
+      if (!fieldErrors[fieldKey]) fieldErrors[fieldKey] = issue.message;
+    }
+  }
+  return fieldErrors;
+}
+
+// Tạo trận cho team (từ team detail). 2 loại:
+// - kind "opponent": đá kèo — matchType FIND_OPPONENT, opponentName = tên đối thủ.
+// - kind "internal": đá nội bộ — matchType INTERNAL, sideAName/sideBName = 2 bên.
+// Trận đều sắp tới (status OPEN, chưa tỷ số), isPrivate=true (không lên /matches).
+// Chỉ chủ đội được tạo. skillTiers: mảng rỗng (trận private không lọc trình độ).
+export async function createTeamMatch(
+  _prev: CreateTeamMatchState,
+  formData: FormData,
+): Promise<CreateTeamMatchState> {
+  const user = await requireUser();
+
+  const parsed = createTeamMatchSchema.safeParse({
+    teamId: formData.get("teamId"),
+    kind: formData.get("kind"),
+    fieldType: formData.get("fieldType"),
+    playTime: formData.get("playTime"),
+    area: formData.get("area"),
+    opponentName: formData.get("opponentName"),
+    sideAName: formData.get("sideAName"),
+    sideBName: formData.get("sideBName"),
+  });
+  if (!parsed.success) {
+    return { fieldErrors: toTeamMatchFieldErrors(parsed.error.issues) };
+  }
+
+  const { teamId, kind, fieldType, playTime, area } = parsed.data;
+  const owned = await getOwnedTeam(teamId, user.id);
+  if ("error" in owned) return { error: owned.error };
+
+  const isInternal = kind === "internal";
+  const matchType = isInternal ? MatchType.INTERNAL : MatchType.FIND_OPPONENT;
+  // internal: home=sideA, away=sideB. opponent: home=team (đội nhà), away=đối thủ.
+  const sideAName = isInternal ? parsed.data.sideAName! : null;
+  const sideBName = isInternal ? parsed.data.sideBName! : null;
+  const opponentName = isInternal ? null : parsed.data.opponentName!;
+
+  try {
+    await db.match.create({
+      data: {
+        creatorId: user.id,
+        teamId,
+        matchType,
+        fieldType,
+        // Trận private không lọc trình độ (mảng rỗng).
+        skillTiers: [],
+        area: area || null,
+        playTimes: [playTime],
+        status: "OPEN",
+        isPrivate: true,
+        opponentName,
+        sideAName,
+        sideBName,
+      },
+    });
+    revalidatePath(`/teams/${teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("createTeamMatch error:", err);
+    return { error: "Không tạo được trận. Thử lại nhé." };
   }
 }

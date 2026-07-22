@@ -24,6 +24,7 @@ import {
 } from "./team-match-cards";
 import { MemberList } from "./member-list";
 import { LeaderboardCard } from "./leaderboard-card";
+import { TeamMatchesPanel } from "./team-matches-panel";
 
 type TabId = "overview" | "squad" | "matches" | "table";
 
@@ -31,31 +32,34 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Tổng quan" },
   { id: "table", label: "Bảng" },
   { id: "squad", label: "Đội hình" },
-  { id: "matches", label: "Lịch đấu" },
+  { id: "matches", label: "Trận đấu" },
 ];
 
 // Subtext cho từng tab placeholder.
-const COMING_SOON_TEXT: Record<Exclude<TabId, "overview" | "squad">, string> = {
+const COMING_SOON_TEXT: Record<Exclude<TabId, "overview" | "squad" | "matches">, string> = {
   table: "Bảng xếp hạng đang được xây dựng.",
-  matches: "Lịch đấu sẽ có khi gắn đội vào kèo.",
 };
 
 export function TeamDetailTabs({
   team,
   canManage,
   nextMatch,
-  recentMatches,
+  matches,
+  upcoming,
   members,
   leaderboard,
 }: {
   team: TeamDetail;
   canManage: boolean;
   nextMatch: TeamMatchItem | null;
-  recentMatches: TeamRecentMatch[];
+  matches: TeamRecentMatch[];
+  upcoming: TeamMatchItem[];
   members: TeamMemberItem[];
   leaderboard: LeaderboardRow[];
 }) {
   const router = useRouter();
+  // Card "Previous games" ở Overview chỉ hiện 5 trận gần nhất; tab Matches hiện hết.
+  const recentMatches = matches.slice(0, 5);
 
   return (
     <Tabs defaultValue="overview" className="gap-4">
@@ -120,6 +124,14 @@ export function TeamDetailTabs({
               />
               <LeaderboardCard rows={leaderboard} />
             </div>
+          ) : id === "matches" ? (
+            <TeamMatchesPanel
+              teamId={team.id}
+              teamName={team.name}
+              upcoming={upcoming}
+              past={matches}
+              canManage={canManage}
+            />
           ) : (
             <ComingSoonPanel text={COMING_SOON_TEXT[id]} />
           )}

@@ -104,9 +104,12 @@ export async function listMatches(filters: MatchFilters = {}) {
 
   // Lấy kèo OPEN (không lọc "sắp tới" ở DB vì play_times là mảng — không có
   // filter trực tiếp "có phần tử >= now"). Lọc trong app ở dưới.
+  // Bỏ kèo private (isPrivate=true): trận team tự tạo (nội bộ / đối thủ tay) chỉ
+  // hiện trong team detail, KHÔNG lên bảng kèo công khai /matches.
   const matches = await db.match.findMany({
     where: {
       status: "OPEN",
+      isPrivate: false,
       ...(timeSlotIds ? { id: { in: [...timeSlotIds] } } : {}),
       ...(filters.matchType ? { matchType: filters.matchType } : {}),
       ...(filters.fieldType ? { fieldType: filters.fieldType } : {}),
@@ -137,6 +140,63 @@ export async function listMatches(filters: MatchFilters = {}) {
 }
 
 export type MatchListItem = Awaited<ReturnType<typeof listMatches>>[number];
+
+// Lấy 1 trận cho trang chi tiết /matches/[id]. include team (name + coverUrl cho
+// hero), field, creator, request ACCEPTED (đối thủ ghép). Trả null nếu không tồn
+// tại hoặc viewer không có quyền xem (private = chỉ owner/thành viên đội).
+// isPrivate=false (kèo public): ai cũng xem (kể cả chưa login).
+// isPrivate=true (trận team tự tạo): chỉ owner/thành viên đội — check membership.
+export async function getMatchById(id: string, viewerUserId?: string) {
+  const match = await db.match.findUnique({
+    where: { id },
+    include: {
+      team: { select: { id: true, name: true, coverUrl: true } },
+      field: { select: { id: true, name: true, address: true } },
+      creator: { select: { id: true, name: true } },
+      requests: {
+        where: { status: "ACCEPTED" },
+        select: { requesterTeam: { select: { id: true, name: true } } },
+        take: 1,
+      },
+      // Bàn đã ghi (per-player goals/assists) — để hiển thị + prefill popup cập nhật.
+      playerStats: { select: { userId: true, goals: true, assists: true } },
+    },
+  });
+  if (!match) return null;
+  // Public match: xem được.
+  if (!match.isPrivate) return match;
+  // Private: viewer phải là chủ đội hoặc thành viên.
+  if (!match.teamId) return null;
+  if (!viewerUserId) return null;
+  // Query riêng để check ownership + membership (team include không có ownerId).
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: {
+      ownerId: true,
+      members: { where: { userId: viewerUserId }, select: { id: true } },
+    },
+  });
+  if (!team) return null;
+  if (team.ownerId === viewerUserId || team.members.length > 0) return match;
+  return null;
+}
+
+export type MatchDetail = NonNullable<Awaited<ReturnType<typeof getMatchById>>>;
+
+// Viewer có quyền cập nhật kết quả trận không? Owner hoặc thành viên đội.
+// Match phải có teamId. Dùng cho nút "Cập nhật kết quả" trên match detail.
+export async function canEditMatch(match: MatchDetail, viewerUserId?: string): Promise<boolean> {
+  if (!viewerUserId || !match.teamId) return false;
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: {
+      ownerId: true,
+      members: { where: { userId: viewerUserId }, select: { id: true } },
+    },
+  });
+  if (!team) return false;
+  return team.ownerId === viewerUserId || team.members.length > 0;
+}
 
 /**
  * Liệt kê tất cả kèo do user tạo (creator-based, MVPe bypass team membership),

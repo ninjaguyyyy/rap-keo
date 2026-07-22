@@ -9,6 +9,40 @@ import {
 } from "../labels";
 import { Badge } from "@/components/ui/badge";
 
+// Shape match dùng được cho resolveSides (hero + match row). Cả TeamMatchItem,
+// TeamRecentMatch (team-matches-panel) và MatchDetail (trang chi tiết) đều thoả.
+// requests: mảng request ACCEPTED (lấy requesterTeam.name làm đối thủ ghép).
+type SideResolvable = {
+  matchType: MatchListItem["matchType"];
+  requests: { requesterTeam: { name: string } | null }[];
+  opponentName: string | null;
+  sideAName: string | null;
+  sideBName: string | null;
+};
+
+// Resolve tên 2 bên của 1 trận cho hiển thị đối đầu (hero + match row).
+// - INTERNAL: home = sideAName, away = sideBName (2 bên nội bộ, không phải đội thật).
+// - FIND_OPPONENT (team-tạo): home = teamName, away = opponentName.
+// - kèo public ghép: away = requests[0].requesterTeam.name (fallback "Đội khách").
+// isHomeTeam: true nếu home là đội thật (highlight brand + tính W/D/L).
+export function resolveSides(
+  match: SideResolvable,
+  teamName: string,
+): { home: string; away: string; isHomeTeam: boolean } {
+  if (match.matchType === "INTERNAL") {
+    return {
+      home: match.sideAName ?? "Bên A",
+      away: match.sideBName ?? "Bên B",
+      isHomeTeam: false,
+    };
+  }
+  const opponent =
+    match.requests[0]?.requesterTeam?.name ??
+    match.opponentName ??
+    "Đội khách";
+  return { home: teamName, away: opponent, isHomeTeam: true };
+}
+
 // Re-export label dùng chung (tránh原名 trùng).
 export { matchTypeLabels };
 
@@ -21,6 +55,8 @@ export const matchTypeBadge: Record<string, string> = {
   NEED_PLAYERS: "bg-type-players-soft text-type-players",
   FIELD_AVAILABLE: "bg-type-field-soft text-type-field",
   LOOKING_FOR_TEAM: "bg-type-team-soft text-type-team",
+  // Trận nội bộ: tông brand-soft (không lên /matches nhưng vẫn cần badge nếu render).
+  INTERNAL: "bg-brand-soft text-brand",
 };
 
 // Trạng thái "live-ish" (đã ghép/chốt) → chip lime nổi bật (DESIGN.md "Spotlight surface").

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MatchCard } from "@/features/matches/components/match-card";
 import { MatchFilters } from "@/features/matches/components/match-filters";
 import { CreateMatchDialog } from "@/features/matches/components/create-match-dialog";
@@ -71,7 +72,9 @@ export default async function MatchesPage({
         <ul className="flex flex-col gap-3">
           {matches.map((match) => (
             <li key={match.id}>
-              <MatchCard match={match} />
+              <Link href={`/matches/${match.id}`} className="block">
+                <MatchCard match={match} />
+              </Link>
             </li>
           ))}
         </ul>

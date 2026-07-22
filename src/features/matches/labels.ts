@@ -13,6 +13,8 @@ export const matchTypeLabels: Record<MatchType, string> = {
   NEED_PLAYERS: "Thiếu người",
   FIELD_AVAILABLE: "Có sân trống",
   LOOKING_FOR_TEAM: "Tìm đội",
+  // Trận nội bộ team tự tạo (private, không lên /matches).
+  INTERNAL: "Nội bộ",
 };
 
 export const fieldTypeLabels: Record<FieldType, string> = {

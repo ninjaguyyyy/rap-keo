@@ -5,7 +5,6 @@
 // Owner luôn hiện đầu list (query sort role desc) và không có nút xóa.
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { teamRoleLabels } from "../labels";
 import type { TeamMemberItem } from "../queries";
 import { TeamAvatar } from "./team-avatar";
 import { AddMemberDialog } from "./add-member-dialog";
@@ -33,6 +32,7 @@ export function MemberList({
         {members.map((m) => {
           const name = m.user.name ?? m.user.phone ?? "—";
           const isOwner = m.role === "OWNER";
+          const isGuest = m.user.isGuest;
           return (
             <li key={m.id} className="flex items-center gap-3 px-4 py-3">
               <TeamAvatar name={name} size="sm" />
@@ -40,15 +40,21 @@ export function MemberList({
                 <p className="truncate text-sm font-semibold text-ink">
                   {name}
                 </p>
+                {/* Guest không có SĐT; user thật hiện SĐT. */}
                 {m.user.phone ? (
                   <p className="truncate text-xs text-ink-subtle">
                     {m.user.phone}
                   </p>
                 ) : null}
               </div>
-              <Badge variant={isOwner ? "secondary" : "outline"}>
-                {teamRoleLabels[m.role]}
-              </Badge>
+              {/* Badge vai trò: owner > guest > member thật. */}
+              {isOwner ? (
+                <Badge variant="secondary">Đội trưởng</Badge>
+              ) : isGuest ? (
+                <Badge variant="outline">Khách</Badge>
+              ) : (
+                <Badge variant="outline">Thành viên</Badge>
+              )}
               {canManage && !isOwner ? (
                 <RemoveMemberButton
                   teamId={teamId}

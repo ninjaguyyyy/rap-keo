@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/session";
 import {
   getTeamById,
   getTeamNextMatch,
-  getTeamRecentMatches,
+  getTeamUpcomingMatches,
+  getTeamMatches,
   listTeamMembers,
   getTeamLeaderboard,
 } from "@/features/teams/queries";
@@ -29,10 +30,12 @@ export default async function TeamDetailPage({
     notFound();
   }
 
-  // Kèo sắp tới + các trận đã đá + thành viên + leaderboard (chạy song song).
-  const [nextMatch, recentMatches, members, leaderboard] = await Promise.all([
+  // Kèo sắp tới (1, cho card Next match) + tất cả sắp tới (tab Trận đấu) + đã đá
+  // + thành viên + leaderboard (chạy song song).
+  const [nextMatch, upcoming, matches, members, leaderboard] = await Promise.all([
     getTeamNextMatch(id),
-    getTeamRecentMatches(id),
+    getTeamUpcomingMatches(id),
+    getTeamMatches(id),
     listTeamMembers(id),
     getTeamLeaderboard(id),
   ]);
@@ -42,7 +45,8 @@ export default async function TeamDetailPage({
       team={team}
       canManage={team.ownerId === user.id}
       nextMatch={nextMatch}
-      recentMatches={recentMatches}
+      upcoming={upcoming}
+      matches={matches}
       members={members}
       leaderboard={leaderboard}
     />

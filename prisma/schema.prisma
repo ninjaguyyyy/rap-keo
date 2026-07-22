@@ -57,6 +57,8 @@ enum MatchType {
   NEED_PLAYERS
   FIELD_AVAILABLE
   LOOKING_FOR_TEAM
+  // Trận nội bộ team tự tạo (A vs B, không đối thủ ngoài, không lên /matches).
+  INTERNAL
 }
 
 enum MatchStatus {
@@ -103,6 +105,10 @@ model User {
   avatarUrl String?  @map("avatar_url")
   // Vai trò: USER mặc định; ADMIN có quyền parse text tạo kèo + quản trị.
   role      UserRole @default(USER) @map("role")
+  // Guest = thành viên thêm bằng tên (không có tài khoản / không đăng nhập được).
+  // name-only, phone/email/passwordHash null. Sau này đăng ký SĐT -> upgrade thành
+  // user thật, giữ nguyên membership + stats.
+  isGuest   Boolean  @default(false) @map("is_guest")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -219,6 +225,16 @@ model Match {
   // away = đội khách (resolve từ request ACCEPTED). Nullable: chưa đá / chưa chốt.
   homeScore   Int?                                   @map("home_score")
   awayScore   Int?                                   @map("away_score")
+  // Trận team tự tạo (matchType FIND_OPPONENT từ team detail): tên đối thủ nhập tay
+  // (chưa có team thật). Nullable: chỉ dùng cho trận do team tạo có đối thủ tự do.
+  opponentName String?                               @map("opponent_name")
+  // Trận nội bộ (matchType INTERNAL): tên 2 bên tự chia (vd "Đội xanh" vs "Đội đỏ").
+  // home = sideA, away = sideB. Nullable: chỉ dùng cho INTERNAL.
+  sideAName   String?                               @map("side_a_name")
+  sideBName   String?                               @map("side_b_name")
+  // true = trận do team tự tạo, KHÔNG hiện trên bảng kèo công khai /matches.
+  // false (mặc định) = kèo public (flow tạo kèo cũ).
+  isPrivate   Boolean  @default(false)              @map("is_private")
   createdAt   DateTime                               @default(now()) @map("created_at")
   updatedAt   DateTime                               @updatedAt @map("updated_at")
 

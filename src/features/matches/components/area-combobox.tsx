@@ -15,10 +15,14 @@ export function AreaCombobox({
   value,
   onChange,
   required,
+  name = "area",
 }: {
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  // Tên hidden input submit giá trị. Default "area" (match form); team form
+  // truyền "homeArea" để khớp field zod createTeamSchema.
+  name?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
@@ -99,8 +103,8 @@ export function AreaCombobox({
         }
         className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       />
-      {/* Hidden input: submit value (label hoặc free text) qua name="area". */}
-      <input type="hidden" name="area" value={value} />
+      {/* Hidden input: submit value (label hoặc free text) qua name được truyền. */}
+      <input type="hidden" name={name} value={value} />
 
       {/* Dropdown list option (filtered). Ẩn nếu không có match. */}
       {open && filtered.length > 0 ? (

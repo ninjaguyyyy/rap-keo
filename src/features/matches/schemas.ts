@@ -84,3 +84,47 @@ export type CreateMatchState = {
   error?: string;
   fieldErrors?: Partial<Record<keyof CreateMatchInput, string>>;
 };
+
+// Cập nhật kết quả trận (popup trên match detail). Tỷ số 2 bên + danh sách bàn
+// của đội nhà (mỗi bàn: scorer + kiến tạo tùy chọn, chọn từ thành viên đội).
+// Cập nhật = set status COMPLETED (đã đá) + ghi PlayerStat.
+const scoreSchema = z
+  .number()
+  .int("Tỷ số không hợp lệ")
+  .min(0, "Tỷ số không âm")
+  .max(50, "Tỷ số tối đa 50");
+
+// 1 bàn: scorerId bắt buộc, assistId tùy chọn (nullish vì FormData.get trả null).
+const scorerSchema = z.object({
+  scorerId: z.string().uuid("Chọn người ghi bàn"),
+  assistId: z.string().uuid().nullish(),
+});
+
+export const updateMatchResultSchema = z
+  .object({
+    matchId: z.string().uuid(),
+    homeScore: scoreSchema,
+    awayScore: scoreSchema,
+    // Mảng bàn (dynamic rows). Có thể ít hơn homeScore (không ghi đủ cũng OK).
+    scorers: z.array(scorerSchema).max(50, "Quá nhiều bàn").default([]),
+  })
+  // assistId không được trùng scorerId (không tự kiến tạo cho mình).
+  .superRefine((data, ctx) => {
+    data.scorers.forEach((s, i) => {
+      if (s.assistId && s.assistId === s.scorerId) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Người kiến tạo không được trùng người ghi bàn.",
+          path: ["scorers", i, "assistId"],
+        });
+      }
+    });
+  });
+
+export type UpdateMatchResultInput = z.infer<typeof updateMatchResultSchema>;
+
+export type UpdateMatchResultState = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<"homeScore" | "awayScore" | "scorers", string>>;
+};

@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { teamSkillTierLabels } from "../labels";
-import { areaLabels } from "@/features/matches/labels";
 import { createTeam } from "../actions";
+import { AreaCombobox } from "@/features/matches/components/area-combobox";
 import type { TeamFormState } from "../schemas";
 import type { SkillTier } from "@/generated/prisma/enums";
 
@@ -25,10 +25,6 @@ const initialState: TeamFormState = {};
 
 // Trình độ để chọn (giữ key enum làm value, label tiếng Việt). 7 mức, no ANY.
 const SKILL_OPTIONS = Object.entries(teamSkillTierLabels) as [SkillTier, string][];
-
-// Khu vực hoạt động: chọn từ list sân cố định (label làm value luôn, khớp với
-// cách feature matches lưu `area`). Không cho nhập tự do.
-const AREA_OPTIONS = Object.values(areaLabels);
 
 type TeamFormProps = {
   team?: {
@@ -109,28 +105,15 @@ export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
         ) : null}
       </div>
 
-      {/* Khu vực (tùy chọn) — chọn từ list sân, không nhập tự do. */}
+      {/* Khu vực (tùy chọn) — autocomplete gợi ý 4 sân + cho nhập free text.
+          Dùng chung AreaCombobox với match (filter theo label, submit text qua
+          hidden input name="homeArea"). */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="team-area">
           Khu vực hoạt động{" "}
           <span className="font-normal text-ink-subtle">(tùy chọn)</span>
         </Label>
-        {/* Giá trị thật submit qua hidden input (Base UI Select không tự gắn name). */}
-        <input type="hidden" name="homeArea" value={homeArea} />
-        <Select value={homeArea} onValueChange={(v) => setHomeArea(String(v))}>
-          <SelectTrigger id="team-area" className="w-full">
-            <SelectValue placeholder="Chọn khu vực / sân">
-              {homeArea || undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {AREA_OPTIONS.map((label) => (
-              <SelectItem key={label} value={label}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AreaCombobox name="homeArea" value={homeArea} onChange={setHomeArea} />
         {state.fieldErrors?.homeArea ? (
           <p className="text-sm text-destructive">
             {state.fieldErrors.homeArea}

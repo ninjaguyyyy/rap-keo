@@ -45,6 +45,7 @@ const teamMatchInclude = {
 // Kèo sắp tới của đội: status OPEN/MATCHED/CONFIRMED có ít nhất 1 giờ >= now,
 // lấy kèo có giờ sớm nhất. Dùng cho card "Next match" trên trang chi tiết đội.
 // playTimes là mảng naive (UTC wall time) -> so sánh với Date.now() trong app.
+// Gồm cả trận do team tự tạo (isPrivate + opponentName/sideA/sideB).
 export async function getTeamNextMatch(teamId: string) {
   const matches = await db.match.findMany({
     where: {
@@ -67,17 +68,39 @@ export async function getTeamNextMatch(teamId: string) {
   return upcoming[0];
 }
 
+// Tất cả trận sắp tới của đội (cho tab Trận đấu, section "Sắp tới"). Sort sớm nhất
+// trước. Bao gồm trận private (team tự tạo) + kèo public gắn team.
+export async function getTeamUpcomingMatches(teamId: string) {
+  const matches = await db.match.findMany({
+    where: {
+      teamId,
+      status: { in: ["OPEN", "MATCHED", "CONFIRMED"] },
+    },
+    include: teamMatchInclude,
+  });
+  const now = Date.now();
+  const upcoming = matches.filter((m) =>
+    m.playTimes.some((p) => p.getTime() >= now),
+  );
+  upcoming.sort(
+    (a, b) =>
+      Math.min(...a.playTimes.map((p) => p.getTime())) -
+      Math.min(...b.playTimes.map((p) => p.getTime())),
+  );
+  return upcoming;
+}
+
 export type TeamMatchItem = NonNullable<Awaited<ReturnType<typeof getTeamNextMatch>>>;
 
-// Kèo đã đá gần đây của đội: status COMPLETED, sort theo giờ đá gần nhất trước,
-// giới hạn `limit`. Dùng cho card "Previous games" trên trang chi tiết đội.
-export async function getTeamRecentMatches(teamId: string, limit = 5) {
+// Kèo đã đá của đội: status COMPLETED, sort gần nhất trước (KHÔNG limit — lấy tất
+// cả cho tab "Lịch đấu"). Page slice 5 đầu cho card "Previous games" ở Overview.
+// playTimes naive (UTC wall time) -> lọc trong app: chỉ giữ kèo đã qua giờ đá.
+export async function getTeamMatches(teamId: string) {
   const matches = await db.match.findMany({
     where: { teamId, status: "COMPLETED" },
     include: teamMatchInclude,
   });
   const now = Date.now();
-  // Chỉ giữ kèo có giờ đá đã qua (toàn bộ giờ < now).
   const past = matches.filter((m) =>
     m.playTimes.every((p) => p.getTime() < now),
   );
@@ -87,17 +110,20 @@ export async function getTeamRecentMatches(teamId: string, limit = 5) {
       Math.max(...b.playTimes.map((p) => p.getTime())) -
       Math.max(...a.playTimes.map((p) => p.getTime())),
   );
-  return past.slice(0, limit);
+  return past;
 }
 
-export type TeamRecentMatch = Awaited<ReturnType<typeof getTeamRecentMatches>>[number];
+export type TeamRecentMatch = Awaited<ReturnType<typeof getTeamMatches>>[number];
 
 // Liệt kê thành viên đội: owner trước (role desc), rồi theo joinedAt. Include user
-// để hiển thị tên/SĐT/avatar. Dùng cho tab "Đội hình" + hydrate leaderboard.
+// để hiển thị tên/SĐT/avatar + isGuest (đánh dấu "Khách"). Dùng cho tab "Đội hình"
+// + hydrate leaderboard.
 export async function listTeamMembers(teamId: string) {
   return db.teamMember.findMany({
     where: { teamId },
-    include: { user: { select: { id: true, name: true, phone: true, avatarUrl: true } } },
+    include: {
+      user: { select: { id: true, name: true, phone: true, avatarUrl: true, isGuest: true } },
+    },
     // OWNER > MEMBER (enum thứ tự: OWNER=0? — sort an toàn bằng role string desc).
     orderBy: [{ role: "desc" }, { joinedAt: "asc" }],
   });
