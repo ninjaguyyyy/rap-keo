@@ -71,3 +71,48 @@ export async function deleteTeamCover(storedUrl: string): Promise<void> {
     console.warn("deleteTeamCover (non-fatal):", err);
   }
 }
+
+// --- Tournament banner ---
+// Bucket riêng cho ảnh bìa giải đấu (tách khỏi team-assets để phân quyền RLS sau).
+export const SUPABASE_TOURNAMENT_BUCKET =
+  process.env.SUPABASE_TOURNAMENT_BUCKET ?? "tournament-assets";
+
+// Upload 1 file làm ảnh bìa giải. Path: tournament-assets/{tournamentId}/{uuid}.{ext}.
+// Mirror uploadTeamCover — cùng pattern, chỉ khác bucket.
+export async function uploadTournamentBanner(
+  file: File,
+  tournamentId: string,
+): Promise<UploadResult> {
+  const supabase = getAdminClient();
+  const rawExt = file.name.split(".").pop() ?? "webp";
+  const ext = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "webp";
+  const path = `${tournamentId}/${crypto.randomUUID()}.${ext}`;
+  const body = Buffer.from(await file.arrayBuffer());
+  const { error } = await supabase.storage
+    .from(SUPABASE_TOURNAMENT_BUCKET)
+    .upload(path, body, {
+      contentType: file.type,
+      upsert: true,
+      cacheControl: "3600",
+    });
+  if (error) throw error;
+  const { data } = supabase.storage
+    .from(SUPABASE_TOURNAMENT_BUCKET)
+    .getPublicUrl(path);
+  return { path, publicUrl: data.publicUrl };
+}
+
+// Xoá 1 ảnh bìa giải cũ. Best-effort, lỗi chỉ log.
+export async function deleteTournamentBanner(storedUrl: string): Promise<void> {
+  try {
+    const supabase = getAdminClient();
+    const marker = `/public/${SUPABASE_TOURNAMENT_BUCKET}/`;
+    const idx = storedUrl.indexOf(marker);
+    if (idx === -1) return;
+    const path = storedUrl.slice(idx + marker.length).split("?")[0];
+    if (!path) return;
+    await supabase.storage.from(SUPABASE_TOURNAMENT_BUCKET).remove([path]);
+  } catch (err) {
+    console.warn("deleteTournamentBanner (non-fatal):", err);
+  }
+}

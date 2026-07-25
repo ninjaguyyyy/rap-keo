@@ -53,6 +53,18 @@ export default async function MainLayout({
           {user ? (
             <div className="flex items-center gap-2.5">
               <Link
+                href="/tournaments"
+                className="text-sm font-medium text-white/80 hover:text-white"
+              >
+                Giải
+              </Link>
+              <Link
+                href="/my-tournaments"
+                className="text-sm font-medium text-white/80 hover:text-white"
+              >
+                Giải của tôi
+              </Link>
+              <Link
                 href="/teams"
                 className="text-sm font-medium text-white/80 hover:text-white"
               >

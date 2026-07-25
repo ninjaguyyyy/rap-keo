@@ -299,6 +299,7 @@ export async function updateMatchResult(
   // Validate scorerId/assistId phải là thành viên đội hiện tại.
   const members = await listTeamMembers(match.teamId);
   const memberIds = new Set(members.map((m) => m.userId));
+  const memberNameById = new Map(members.map((m) => [m.userId, m.user.name ?? m.user.phone ?? "—"]));
   for (const s of parsed.data.scorers) {
     if (!memberIds.has(s.scorerId)) {
       return { fieldErrors: { scorers: "Người ghi bàn không thuộc đội." } };
@@ -310,12 +311,24 @@ export async function updateMatchResult(
 
   // Aggregate PlayerStat: mỗi userId 1 row, goals = count làm scorer, assists =
   // count làm assist.
-  const statsByUser = new Map<string, { goals: number; assists: number }>();
+  const statsByUser = new Map<string, { goals: number; assists: number; displayName: string }>();
   for (const s of parsed.data.scorers) {
-    if (!statsByUser.has(s.scorerId)) statsByUser.set(s.scorerId, { goals: 0, assists: 0 });
+    if (!statsByUser.has(s.scorerId)) {
+      statsByUser.set(s.scorerId, {
+        goals: 0,
+        assists: 0,
+        displayName: memberNameById.get(s.scorerId) ?? "—",
+      });
+    }
     statsByUser.get(s.scorerId)!.goals += 1;
     if (s.assistId) {
-      if (!statsByUser.has(s.assistId)) statsByUser.set(s.assistId, { goals: 0, assists: 0 });
+      if (!statsByUser.has(s.assistId)) {
+        statsByUser.set(s.assistId, {
+          goals: 0,
+          assists: 0,
+          displayName: memberNameById.get(s.assistId) ?? "—",
+        });
+      }
       statsByUser.get(s.assistId)!.assists += 1;
     }
   }
@@ -336,6 +349,7 @@ export async function updateMatchResult(
             matchId,
             teamId: match.teamId!,
             userId,
+            displayName: v.displayName,
             goals: v.goals,
             assists: v.assists,
           })),

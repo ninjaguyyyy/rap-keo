@@ -90,6 +90,31 @@ enum UserRole {
   ADMIN
 }
 
+// Thể thức giải đấu. MVP: chỉ LEAGUE (đãi vòng tròn 1 lượt).
+// Mở rộng sau: KNOCKOUT_4, KNOCKOUT_8, GROUPS_PLUS_KNOCKOUT.
+enum TournamentFormat {
+  LEAGUE
+}
+
+// Trạng thái giải. DRAFT -> PENDING (gửi duyệt) -> APPROVED/REJECTED.
+// APPROVED -> COMPLETED (tất cả trận xong) hoặc CANCELLED.
+enum TournamentStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+// Trạng thái participant. MVP: organizer thêm trực tiếp -> mặc định ACCEPTED.
+// PENDING/REJECTED dành cho self-registration (task sau).
+enum TournamentParticipantStatus {
+  ACCEPTED
+  PENDING
+  REJECTED
+}
+
 // ---------- Models ----------
 
 model User {
@@ -123,6 +148,10 @@ model User {
   notifications   Notification[]
   // Vua phá lưới / kiến tạo: mỗi user có nhiều dòng PlayerStat (1 trận / 1 đội).
   playerStats     PlayerStat[]
+  // Giải đấu user làm organizer (tạo giải).
+  organizedTournaments Tournament[] @relation("TournamentOrganizer")
+  // Cầu thủ của participant giải gắn với user (chọn từ TeamMember hoặc tự thêm).
+  tournamentPlayers     TournamentPlayer[]
 
   @@map("users")
 }
@@ -169,6 +198,9 @@ model Team {
   requestsFromTeam MatchRequest[]
   // Bảng PlayerStat của đội (per-match, per-player) -> aggregate leaderboard.
   playerStats      PlayerStat[]
+  // Giải đấu đội tham gia (qua TournamentParticipant). teamId nullable trên
+  // participant (team lẻ không gắn Team) -> không dùng every/some trực tiếp.
+  tournamentParticipants TournamentParticipant[]
 
   @@index([ownerId])
   @@map("teams")
@@ -244,10 +276,17 @@ model Match {
   requests MatchRequest[]
   // Bàn thắng / kiến tạo của từng cầu thủ trong trận (ghi khi COMPLETED).
   playerStats PlayerStat[]
+  // Trận thuộc giải đấu (nullable: trận thường / team match không thuộc giải).
+  tournamentId String?                              @map("tournament_id") @db.Uuid
+  tournament   Tournament?                          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  // Vòng đấu (chỉ tournament match LEAGUE): 1..N-1 (N chẵn) hoặc 1..N (N lẻ có bye).
+  // Nullable: trận thường / team match không thuộc giải. Set lúc sinh fixture.
+  round        Int?
 
   @@index([creatorId])
   @@index([teamId])
   @@index([fieldId])
+  @@index([tournamentId])
   // lọc kèo OPEN có giờ sắp tới: query lọc trong app (array không dùng B-tree trực tiếp).
   @@map("matches")
 }
@@ -285,24 +324,119 @@ model Notification {
   @@map("notifications")
 }
 
-// Số liệu cầu thủ trong 1 trận: bàn thắng / kiến tạo. Per-match, per-team, per-player.
-// Khóa (matchId, userId): 1 cầu thủ 1 dòng/trận. teamId = đội mà cầu thủ ghi bàn
-// (denormalize từ membership tại thời điểm ghi) -> aggregate leaderboard theo team.
-// Cascade theo match (xóa trận -> xóa stat); user/team xóa -> cascade stat.
+// Số liệu cầu thủ trong 1 trận: bàn thắng / kiến tạo. Per-match, per-player.
+// 2 chế độ player:
+// - User hệ thống: userId != null, participantPlayerId null. (Match thường + tournament
+//   match khi chọn từ TeamMember có user thật.)
+// - Cầu thủ ngoài giải: userId null, participantPlayerId != null. (Tournament match khi
+//   chọn TournamentPlayer.userId null — chỉ có tên.)
+// displayName: snapshot tên lúc ghi — dùng cho leaderboard không cần hydrate lại.
+// teamId nullable: tournament match của team lẻ (participant.teamId null) không có team
+// thật. participantId: chỉ tournament stat (nullable cho match thường).
+// Cascade theo match (xóa trận -> xóa stat); user/team/participant/player xóa -> cascade.
 model PlayerStat {
-  id      String @id @default(uuid()) @db.Uuid
-  matchId String @map("match_id") @db.Uuid
-  teamId  String @map("team_id") @db.Uuid
-  userId  String @map("user_id") @db.Uuid
-  goals   Int    @default(0)
-  assists Int    @default(0)
+  id           String  @id @default(uuid()) @db.Uuid
+  matchId      String  @map("match_id") @db.Uuid
+  teamId       String? @map("team_id") @db.Uuid
+  userId       String? @map("user_id") @db.Uuid
+  // Link tới TournamentPlayer (cầu thủ ngoài giải, userId null). Nullable: stat cho
+  // user hệ thống thì null. XOR với userId (refine ở action, không enforce DB).
+  participantPlayerId String? @map("participant_player_id") @db.Uuid
+  // Participant mà player thuộc (chỉ tournament stat). Nullable cho match thường.
+  // Dùng cho leaderboard hydrate participantDisplayName + filter theo giải.
+  participantId       String? @map("participant_id") @db.Uuid
+  displayName  String  @map("display_name")
+  goals        Int     @default(0)
+  assists      Int     @default(0)
 
-  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match             Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team              Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user              User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  participantPlayer TournamentPlayer? @relation(fields: [participantPlayerId], references: [id], onDelete: Cascade)
 
-  @@unique([matchId, userId])
   @@index([teamId])
   @@index([userId])
+  @@index([participantPlayerId])
+  @@index([participantId])
   @@map("player_stats")
+}
+
+// Giải đấu. Organizer (User) tạo -> ADMIN duyệt -> public trên /tournaments.
+// Trận của giải lưu trong bảng Match (tournamentId != null, matchType INTERNAL,
+// isPrivate true). MVP: format LEAGUE (đãi vòng tròn 1 lượt).
+model Tournament {
+  id           String           @id @default(uuid()) @db.Uuid
+  name         String
+  // Slug cho URL /tournaments/[slug]. Sinh từ name (slugify bỏ dấu tiếng Việt),
+  // auto suffix -2, -3... khi trùng. Unique trong toàn bộ table.
+  slug         String           @unique
+  description  String?
+  bannerUrl    String?          @map("banner_url")
+  fieldType    FieldType        @map("field_type")
+  format       TournamentFormat
+  // Trình độ mong muốn (tùy chọn, chỉ hiển thị — không enforce khi add participant).
+  skillTier    SkillTier?       @map("skill_tier")
+  area         String?
+  organizerId  String           @map("organizer_id") @db.Uuid
+  status       TournamentStatus @default(DRAFT)
+  // startedAt: khi organizer "Bắt đầu giải" -> sinh fixture + lock participants.
+  startedAt    DateTime?        @map("started_at")
+  completedAt  DateTime?        @map("completed_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt        @map("updated_at")
+
+  organizer    User                     @relation("TournamentOrganizer", fields: [organizerId], references: [id])
+  participants TournamentParticipant[]
+  matches      Match[]
+
+  @@index([organizerId])
+  @@index([status])
+  @@map("tournaments")
+}
+
+// Đội tham gia giải. teamId null = team lẻ (chỉ displayName). teamId != null =
+// team thật trong hệ thống. displayName là identifier trong giải (copy từ
+// Team.name hoặc nhập tay) — unique trong 1 giải.
+model TournamentParticipant {
+  id           String                      @id @default(uuid()) @db.Uuid
+  tournamentId String                      @map("tournament_id") @db.Uuid
+  teamId       String?                     @map("team_id") @db.Uuid
+  displayName  String                      @map("display_name")
+  status       TournamentParticipantStatus @default(ACCEPTED)
+  joinedAt     DateTime                    @default(now()) @map("joined_at")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  players    TournamentPlayer[]
+
+  @@unique([tournamentId, displayName])
+  @@index([tournamentId])
+  @@index([teamId])
+  @@map("tournament_participants")
+}
+
+// Cầu thủ của 1 participant trong giải. Per-participant (tách biệt TeamMember):
+// prefill từ TeamMember khi participant là team hệ thống, nhưng thêm/bớt trong
+// giải không động đến TeamMember gốc. userId null = cầu thủ ngoài (chỉ tên).
+// Cascade theo participant (xóa đội khỏi giải -> xóa hết cầu thủ).
+model TournamentPlayer {
+  id            String   @id @default(uuid()) @db.Uuid
+  participantId String   @map("participant_id") @db.Uuid
+  // Nullable: null = cầu thủ ngoài (chỉ displayName). != null = link tới User
+  // (khi chọn từ TeamMember, có thể là user thật hoặc guest).
+  userId        String?  @map("user_id") @db.Uuid
+  displayName   String   @map("display_name")
+  // Số áo (tùy chọn). Unique trong 1 participant để tránh trùng số.
+  jerseyNumber  Int?     @map("jersey_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  participant TournamentParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  user        User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Back-ref PlayerStat khi player này ghi bàn trong trận của giải.
+  playerStats PlayerStat[]
+
+  @@unique([participantId, userId])
+  @@unique([participantId, jerseyNumber])
+  @@index([participantId])
+  @@map("tournament_players")
 }

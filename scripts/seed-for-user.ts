@@ -245,7 +245,7 @@ async function main() {
       { goals: 0, assists: 0 },
     ],
   };
-  const playerStats: { matchId: string; teamId: string; userId: string; goals: number; assists: number }[] = [];
+  const playerStats: { matchId: string; teamId: string; userId: string; displayName: string; goals: number; assists: number }[] = [];
   for (const m of completed) {
     for (const mm of mockMembers) {
       const plan = statPlan[mm.id][completed.indexOf(m)];
@@ -254,6 +254,7 @@ async function main() {
           matchId: m.id,
           teamId: team.id,
           userId: mm.id,
+          displayName: mm.name,
           goals: plan.goals,
           assists: plan.assists,
         });

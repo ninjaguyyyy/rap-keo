@@ -160,13 +160,13 @@ export async function getTeamLeaderboard(
   const memberIds = new Set(members.map((m) => m.userId));
 
   const rows: LeaderboardRow[] = stats
-    .filter((s) => memberIds.has(s.userId))
+    .filter((s) => s.userId != null && memberIds.has(s.userId))
     .map((s) => {
       const goals = s._sum.goals ?? 0;
       const assists = s._sum.assists ?? 0;
       return {
-        userId: s.userId,
-        name: nameById.get(s.userId) ?? "—",
+        userId: s.userId as string,
+        name: nameById.get(s.userId as string) ?? "—",
         goals,
         assists,
         points: goals + assists,
