@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { randomInt } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { forgotPasswordSchema } from "@/features/auth/schemas";
 import { checkAndMarkForgotPasswordRequest } from "@/features/auth/forgot-password-rate-limit";
+import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { forgotPasswordOtpHtml } from "@/features/auth/emails/forgot-password-otp";
 
 const OTP_REQUEST_COOLDOWN_MS = 60_000;
+const OTP_TTL_MS = 15 * 60_000; // OTP hết hạn sau 15 phút.
 
 // Parse danh sách email admin từ env (comma-separated). VD: "a@x.com,b@y.com".
 // Bắt buộc — không fallback tới user role ADMIN trong DB nữa (đơn giản hóa flow:
@@ -66,6 +69,25 @@ export async function POST(request: Request) {
 
   const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const requestedAt = new Date();
+
+  // Lưu OTP hash vào DB (verify ở step 2 — POST /api/auth/reset-password).
+  // bcrypt hash 10 rounds ~ 100ms — OK cho MVP volume.
+  try {
+    const otpHash = await bcrypt.hash(otp, 10);
+    await db.passwordResetOtp.create({
+      data: {
+        phone: parsed.data.phone,
+        otpHash,
+        expiresAt: new Date(requestedAt.getTime() + OTP_TTL_MS),
+      },
+    });
+  } catch (err) {
+    console.error("[forgot-password] Lưu OTP vào DB thất bại:", err);
+    return NextResponse.json(
+      { error: "Không thể xử lý yêu cầu lúc này. Vui lòng thử lại." },
+      { status: 500 },
+    );
+  }
 
   // Gửi email OTP tới danh sách admin. Best-effort: log lỗi nhưng không crash —
   // vẫn trả 200 để user không bị lặp request (rate limit đã chặn 60s).

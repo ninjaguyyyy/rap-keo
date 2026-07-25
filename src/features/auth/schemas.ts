@@ -37,6 +37,17 @@ export const forgotPasswordSchema = z.object({
   phone: phoneSchema,
 });
 
+// Đặt lại mật khẩu (step 2): OTP 6 số + mật khẩu mới. Server verify OTP + set mk mới.
+export const resetPasswordSchema = z.object({
+  phone: phoneSchema,
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "OTP gồm 6 chữ số"),
+  newPassword: passwordSchema,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

@@ -11,12 +11,65 @@ import { db } from "@/lib/db";
 import { loginSchema } from "@/features/auth/schemas";
 import type { UserRole } from "@/generated/prisma/enums";
 
+// Field Auth.js gửi cho adapter.createUser/updateUser. Remap `image` -> `avatarUrl`
+// (cột trong schema Ráp Kèo) + bỏ `emailVerified` (schema không có). Không remap
+// -> Prisma error "Unknown argument `image`" lúc user.create.
+type AdapterUserInput = {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  emailVerified?: Date | null;
+};
+
+const baseAdapter = PrismaAdapter(db as never) as Record<string, unknown>;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   // Adapter cho OAuth: lưu token vào bảng Account + User.
   // session strategy là "jwt" (ở auth.config.ts) -> adapter chỉ lo tạo/link user,
   // không dùng database session.
-  adapter: PrismaAdapter(db as never),
+  adapter: {
+    ...baseAdapter,
+    // Override createUser: remap image -> avatarUrl + bỏ emailVerified.
+    async createUser(data: AdapterUserInput) {
+      return db.user.create({
+        data: {
+          name: data.name ?? null,
+          email: data.email ?? null,
+          avatarUrl: data.image ?? null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          role: true,
+        },
+      }) as never;
+    },
+    // updateUser: remap image -> avatarUrl nếu Auth.js gửi (vd khi update profile).
+    async updateUser(data: AdapterUserInput & { id: string }) {
+      return db.user.update({
+        where: { id: data.id },
+        data: {
+          ...(data.name != null ? { name: data.name } : {}),
+          ...(data.email != null ? { email: data.email } : {}),
+          ...(data.image != null ? { avatarUrl: data.image } : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          role: true,
+        },
+      }) as never;
+    },
+    // getUser, getUserByEmail, getUserByAccount, deleteUser, linkAccount,
+    // unlinkAccount: giữ default của PrismaAdapter — Auth.js gọi id/email/name/image
+    // để đọc session, Prisma trả đủ field qua select trên nên map OK.
+  } as never,
   providers: [
     Google({
       // Client ID/Secret lấy từ Google Cloud Console (OAuth client Web).

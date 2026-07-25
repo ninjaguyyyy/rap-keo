@@ -440,3 +440,20 @@ model TournamentPlayer {
   @@index([participantId])
   @@map("tournament_players")
 }
+
+// OTP đặt lại mật khẩu: sinh khi user quên mk, gửi tới admin (qua email) để forward
+// cho user. Hash bằng bcrypt (không lưu plaintext — nếu DB leak không lộ OTP).
+// expiresAt: hết hạn sau 15 phút. usedAt: mark sau khi verify thành công (ngăn replay).
+// Cleanup: không cần cron — query filter expiresAt > now; row cũ tự bỏ qua (MVP).
+model PasswordResetOtp {
+  id         String    @id @default(uuid()) @db.Uuid
+  phone      String
+  // Hash OTP bằng bcrypt (10 rounds). Không lưu plaintext.
+  otpHash    String    @map("otp_hash")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([phone, expiresAt])
+  @@map("password_reset_otps")
+}
