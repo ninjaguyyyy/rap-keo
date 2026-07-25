@@ -4,8 +4,20 @@ import { forgotPasswordSchema } from "@/features/auth/schemas";
 import { checkAndMarkForgotPasswordRequest } from "@/features/auth/forgot-password-rate-limit";
 import { db } from "@/lib/db";
 import { publishNotificationEvent } from "@/features/notifications/sse-bus";
+import { sendEmail } from "@/lib/email";
+import { forgotPasswordOtpHtml } from "@/features/auth/emails/forgot-password-otp";
 
 const OTP_REQUEST_COOLDOWN_MS = 60_000;
+
+// Parse danh sách email admin từ env (comma-separated). Bỏ trống -> fallback
+// tới email của user role ADMIN trong DB.
+function parseAdminEmails(): string[] {
+  const raw = process.env.ADMIN_NOTIFICATION_EMAIL ?? "";
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && /.+@.+\..+/.test(s));
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -42,12 +54,13 @@ export async function POST(request: Request) {
   }
 
   const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const requestedAt = new Date();
 
-  let admins: { id: string }[] = [];
+  let admins: { id: string; email: string | null }[] = [];
   try {
     admins = await db.user.findMany({
       where: { role: "ADMIN" },
-      select: { id: true },
+      select: { id: true, email: true },
     });
   } catch {
     return NextResponse.json(
@@ -63,11 +76,10 @@ export async function POST(request: Request) {
     );
   }
 
+  // Tạo notification (real-time toast cho admin đang online) — best-effort.
   try {
     await Promise.all(
       admins.map(async (admin) => {
-        // Tạm thời tái sử dụng enum type hiện có để tránh thay đổi schema DB,
-        // phân loại nghiệp vụ thật bằng payload.kind.
         const notification = await db.notification.create({
           data: {
             userId: admin.id,
@@ -76,7 +88,7 @@ export async function POST(request: Request) {
               kind: "FORGOT_PASSWORD_OTP",
               phone: parsed.data.phone,
               otp,
-              requestedAt: new Date().toISOString(),
+              requestedAt: requestedAt.toISOString(),
             },
           },
         });
@@ -98,10 +110,40 @@ export async function POST(request: Request) {
     );
   }
 
+  // Gửi email OTP tới admin. Ưu tiên danh sách từ env (ADMIN_NOTIFICATION_EMAIL),
+  // fallback tới email của user role ADMIN trong DB. Best-effort: log lỗi nhưng
+  // không fail request (notification real-time vẫn đã gửi — email là bonus).
+  const adminEmails = parseAdminEmails();
+  const emailRecipients =
+    adminEmails.length > 0
+      ? adminEmails
+      : admins.map((a) => a.email).filter((e): e is string => e != null);
+
+  if (emailRecipients.length > 0) {
+    const emailResult = await sendEmail({
+      to: emailRecipients,
+      subject: `Yêu cầu quên mật khẩu — OTP cho ${parsed.data.phone}`,
+      html: forgotPasswordOtpHtml({
+        phone: parsed.data.phone,
+        otp,
+        requestedAt,
+      }),
+      text: `Yêu cầu quên mật khẩu\n\nSĐT: ${parsed.data.phone}\nOTP: ${otp}\nThời gian: ${requestedAt.toLocaleString("vi-VN")}`,
+    });
+    if (!emailResult.ok) {
+      console.error("[forgot-password] sendEmail failed:", emailResult.error);
+    }
+  } else {
+    console.warn(
+      "[forgot-password] Không có email admin nhận (ADMIN_NOTIFICATION_EMAIL trống + admin user không có email).",
+    );
+  }
+
   return NextResponse.json(
     {
       ok: true,
-      message: "Yêu cầu đã được gửi cho admin. Vui lòng chờ OTP được gửi thủ công.",
+      message:
+        "Yêu cầu đã được gửi. Admin sẽ nhận OTP qua email và liên hệ lại bạn sớm.",
     },
     { status: 200 },
   );
