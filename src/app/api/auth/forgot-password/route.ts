@@ -2,15 +2,14 @@ import { NextResponse } from "next/server";
 import { randomInt } from "node:crypto";
 import { forgotPasswordSchema } from "@/features/auth/schemas";
 import { checkAndMarkForgotPasswordRequest } from "@/features/auth/forgot-password-rate-limit";
-import { db } from "@/lib/db";
-import { publishNotificationEvent } from "@/features/notifications/sse-bus";
 import { sendEmail } from "@/lib/email";
 import { forgotPasswordOtpHtml } from "@/features/auth/emails/forgot-password-otp";
 
 const OTP_REQUEST_COOLDOWN_MS = 60_000;
 
-// Parse danh sách email admin từ env (comma-separated). Bỏ trống -> fallback
-// tới email của user role ADMIN trong DB.
+// Parse danh sách email admin từ env (comma-separated). VD: "a@x.com,b@y.com".
+// Bắt buộc — không fallback tới user role ADMIN trong DB nữa (đơn giản hóa flow:
+// chỉ cần set ADMIN_NOTIFICATION_EMAIL là chạy được, không cần seed user ADMIN).
 function parseAdminEmails(): string[] {
   const raw = process.env.ADMIN_NOTIFICATION_EMAIL ?? "";
   return raw
@@ -53,89 +52,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  const requestedAt = new Date();
-
-  let admins: { id: string; email: string | null }[] = [];
-  try {
-    admins = await db.user.findMany({
-      where: { role: "ADMIN" },
-      select: { id: true, email: true },
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Không thể xử lý yêu cầu lúc này. Vui lòng thử lại." },
-      { status: 500 },
+  // Resolve email nhận OTP. Bắt buộc có — không có thì trả 503 (service chưa setup).
+  const adminEmails = parseAdminEmails();
+  if (adminEmails.length === 0) {
+    console.error(
+      "[forgot-password] ADMIN_NOTIFICATION_EMAIL chưa set — không có nơi nhận OTP.",
     );
-  }
-
-  if (admins.length === 0) {
     return NextResponse.json(
-      { error: "Hiện chưa có admin trực tuyến để xử lý yêu cầu." },
+      { error: "Hệ thống chưa cấu hình nhận yêu cầu. Vui lòng thử lại sau." },
       { status: 503 },
     );
   }
 
-  // Tạo notification (real-time toast cho admin đang online) — best-effort.
-  try {
-    await Promise.all(
-      admins.map(async (admin) => {
-        const notification = await db.notification.create({
-          data: {
-            userId: admin.id,
-            type: "MATCH_REQUEST",
-            payload: {
-              kind: "FORGOT_PASSWORD_OTP",
-              phone: parsed.data.phone,
-              otp,
-              requestedAt: requestedAt.toISOString(),
-            },
-          },
-        });
+  const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const requestedAt = new Date();
 
-        publishNotificationEvent({
-          id: notification.id,
-          userId: notification.userId,
-          type: notification.type,
-          payload: notification.payload,
-          read: notification.read,
-          createdAt: notification.createdAt.toISOString(),
-        });
-      }),
-    );
-  } catch {
+  // Gửi email OTP tới danh sách admin. Best-effort: log lỗi nhưng không crash —
+  // vẫn trả 200 để user không bị lặp request (rate limit đã chặn 60s).
+  const emailResult = await sendEmail({
+    to: adminEmails,
+    subject: `Yêu cầu quên mật khẩu — OTP cho ${parsed.data.phone}`,
+    html: forgotPasswordOtpHtml({
+      phone: parsed.data.phone,
+      otp,
+      requestedAt,
+    }),
+    text: `Yêu cầu quên mật khẩu\n\nSĐT: ${parsed.data.phone}\nOTP: ${otp}\nThời gian: ${requestedAt.toLocaleString("vi-VN")}`,
+  });
+  if (!emailResult.ok) {
+    console.error("[forgot-password] sendEmail failed:", emailResult.error);
     return NextResponse.json(
-      { error: "Không thể gửi thông báo cho admin. Vui lòng thử lại." },
-      { status: 500 },
-    );
-  }
-
-  // Gửi email OTP tới admin. Ưu tiên danh sách từ env (ADMIN_NOTIFICATION_EMAIL),
-  // fallback tới email của user role ADMIN trong DB. Best-effort: log lỗi nhưng
-  // không fail request (notification real-time vẫn đã gửi — email là bonus).
-  const adminEmails = parseAdminEmails();
-  const emailRecipients =
-    adminEmails.length > 0
-      ? adminEmails
-      : admins.map((a) => a.email).filter((e): e is string => e != null);
-
-  if (emailRecipients.length > 0) {
-    const emailResult = await sendEmail({
-      to: emailRecipients,
-      subject: `Yêu cầu quên mật khẩu — OTP cho ${parsed.data.phone}`,
-      html: forgotPasswordOtpHtml({
-        phone: parsed.data.phone,
-        otp,
-        requestedAt,
-      }),
-      text: `Yêu cầu quên mật khẩu\n\nSĐT: ${parsed.data.phone}\nOTP: ${otp}\nThời gian: ${requestedAt.toLocaleString("vi-VN")}`,
-    });
-    if (!emailResult.ok) {
-      console.error("[forgot-password] sendEmail failed:", emailResult.error);
-    }
-  } else {
-    console.warn(
-      "[forgot-password] Không có email admin nhận (ADMIN_NOTIFICATION_EMAIL trống + admin user không có email).",
+      { error: "Không gửi được email lúc này. Vui lòng thử lại sau." },
+      { status: 502 },
     );
   }
 

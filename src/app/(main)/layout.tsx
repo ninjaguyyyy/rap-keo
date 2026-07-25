@@ -3,7 +3,6 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { signOut } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/session";
-import { AdminForgotPasswordListener } from "@/features/notifications/components/admin-forgot-password-listener";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import {
   listNotifications,
@@ -114,8 +113,6 @@ export default async function MainLayout({
       <main className="bg-surface-muted -mt-3 rounded-t-2xl px-4 py-4">
         <div className="mx-auto max-w-md">{children}</div>
       </main>
-
-      {user?.role === "ADMIN" ? <AdminForgotPasswordListener /> : null}
     </div>
   );
 }
