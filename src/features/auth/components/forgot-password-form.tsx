@@ -12,9 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   forgotPasswordSchema,
-  resetPasswordSchema,
+  passwordSchema,
   type ForgotPasswordInput,
-  type ResetPasswordInput,
 } from "../schemas";
 
 // Form quên mật khẩu 2 step:
@@ -22,6 +21,9 @@ import {
 //   Step "otp":   nhập OTP + mk mới + confirm → POST /api/auth/reset-password
 //                 (verify OTP + set mk mới) → signIn client → redirect.
 // State phone giữ qua 2 step (không truyền qua URL để tránh leak SĐT trong history).
+// Phone không nằm trong RHF form ở step "otp" — đã validate ở step 1 và server
+// re-validate đầy đủ qua resetPasswordSchema. Tránh hidden input không sync giá
+// trị vào RHF internal state → handleSubmit bị chặn validate ngầm.
 type ApiResponse = {
   ok?: boolean;
   message?: string;
@@ -29,6 +31,18 @@ type ApiResponse = {
   retryAfterSeconds?: number;
   fieldErrors?: Partial<Record<string, string>>;
 };
+
+type OtpFormValues = {
+  otp: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+const otpFormSchema = z.object({
+  otp: z.string().trim().regex(/^\d{6}$/, "OTP gồm 6 chữ số"),
+  newPassword: passwordSchema,
+  confirmNewPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+});
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -42,16 +56,12 @@ export function ForgotPasswordForm() {
     resolver: zodResolver(forgotPasswordSchema),
     mode: "onTouched",
   });
-  // Form step "otp".
-  const otpForm = useForm<ResetPasswordInput & { confirmNewPassword: string }>({
-    resolver: zodResolver(
-      // Extend resetPasswordSchema với confirmNewPassword (validate client-only).
-      resetPasswordSchema.extend({
-        confirmNewPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
-      }),
-    ) as never,
+  // Form step "otp". Phone không nằm trong form (giữ ở React state) — xem ghi chú
+  // ở đầu file.
+  const otpForm = useForm<OtpFormValues>({
+    resolver: zodResolver(otpFormSchema),
     mode: "onTouched",
-    defaultValues: { phone: "", otp: "", newPassword: "", confirmNewPassword: "" },
+    defaultValues: { otp: "", newPassword: "", confirmNewPassword: "" },
   });
 
   // --- Step "phone": submit SĐT → gửi OTP email admin → setStep("otp").
@@ -84,9 +94,7 @@ export function ForgotPasswordForm() {
   };
 
   // --- Step "otp": submit OTP + mk mới → verify → set mk → signIn → redirect.
-  const onOtpSubmit = async (values: ResetPasswordInput & {
-    confirmNewPassword: string;
-  }) => {
+  const onOtpSubmit = async (values: OtpFormValues) => {
     if (values.confirmNewPassword !== values.newPassword) {
       otpForm.setError("confirmNewPassword", {
         message: "Mật khẩu xác nhận không khớp.",
@@ -117,7 +125,7 @@ export function ForgotPasswordForm() {
       if (data.fieldErrors) {
         for (const [key, message] of Object.entries(data.fieldErrors)) {
           if (message) {
-            otpForm.setError(key as keyof ResetPasswordInput, { message });
+            otpForm.setError(key as keyof OtpFormValues, { message });
           }
         }
       }
@@ -242,8 +250,6 @@ export function ForgotPasswordForm() {
         className="flex flex-col gap-3.5"
         noValidate
       >
-        <input type="hidden" {...otpForm.register("phone")} value={phone} />
-
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="otp" className="text-[13px]">
             Mã OTP (6 chữ số)

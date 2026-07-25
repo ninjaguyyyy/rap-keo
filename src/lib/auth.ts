@@ -22,6 +22,23 @@ type AdapterUserInput = {
   emailVerified?: Date | null;
 };
 
+// Field Auth.js gửi cho adapter.linkAccount. Remap snake_case -> camelCase
+// (schema Ráp Kèo dùng camelCase: access_token -> accessToken, id_token -> idToken,
+// expires_at -> expiresAt, token_type -> tokenType, provider_account_id ->
+// providerAccountId). Không remap -> Prisma error "Unknown argument `access_token`".
+type AdapterAccountInput = {
+  provider: string;
+  type: string;
+  providerAccountId: string;
+  access_token?: string | null;
+  id_token?: string | null;
+  refresh_token?: string | null;
+  expires_at?: number | null;
+  token_type?: string | null;
+  scope?: string | null;
+  userId: string;
+};
+
 const baseAdapter = PrismaAdapter(db as never) as Record<string, unknown>;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -66,9 +83,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       }) as never;
     },
-    // getUser, getUserByEmail, getUserByAccount, deleteUser, linkAccount,
-    // unlinkAccount: giữ default của PrismaAdapter — Auth.js gọi id/email/name/image
-    // để đọc session, Prisma trả đủ field qua select trên nên map OK.
+    // Override linkAccount: remap snake_case -> camelCase cho schema Ráp Kèo.
+    // PrismaAdapter default dùng snake_case (access_token, id_token...) — schema
+    // dùng camelCase nên phải remap.
+    async linkAccount(data: AdapterAccountInput) {
+      return db.account.create({
+        data: {
+          userId: data.userId,
+          type: data.type,
+          provider: data.provider,
+          providerAccountId: data.providerAccountId,
+          refreshToken: data.refresh_token ?? null,
+          accessToken: data.access_token ?? null,
+          expiresAt: data.expires_at ?? null,
+          tokenType: data.token_type ?? null,
+          scope: data.scope ?? null,
+          idToken: data.id_token ?? null,
+        },
+      }) as never;
+    },
+    // getUser, getUserByEmail, getUserByAccount, deleteUser, unlinkAccount: giữ
+    // default của PrismaAdapter — chỉ linkAccount cần remap do schema camelCase.
   } as never,
   providers: [
     Google({
