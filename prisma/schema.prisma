@@ -146,6 +146,7 @@ model User {
   createdMatches  Match[]
   matchRequests   MatchRequest[]
   notifications   Notification[]
+  webPushSubscriptions WebPushSubscription[]
   // Vua phá lưới / kiến tạo: mỗi user có nhiều dòng PlayerStat (1 trận / 1 đội).
   playerStats     PlayerStat[]
   // Giải đấu user làm organizer (tạo giải).
@@ -322,6 +323,24 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// Web Push subscriptions theo từng thiết bị/browser của user.
+// endpoint unique toàn cục; 1 user có thể có nhiều subscription (điện thoại, laptop).
+model WebPushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("web_push_subscriptions")
 }
 
 // Số liệu cầu thủ trong 1 trận: bàn thắng / kiến tạo. Per-match, per-player.

@@ -15,8 +15,15 @@ const interSans = Inter({
 // Bump favicon/logo hiển thị ở tab trình duyệt và màn hình chính.
 // Đặt icon cỡ lớn để trình duyệt ưu tiên dùng bản nét cao.
 export const metadata: Metadata = {
+  applicationName: "Ráp Kèo",
   title: "Ráp Kèo",
   description: "Ráp kèo bóng đá phủi — tìm đối, tìm người, tìm sân.",
+  themeColor: "#0a5c3a",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ráp Kèo",
+  },
   icons: {
     icon: [
       { url: "/formation.png", sizes: "any" },

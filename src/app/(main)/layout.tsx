@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { signOut } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/session";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { PushNotificationToggle } from "@/features/pwa/components/push-notification-toggle";
 import {
   listNotifications,
   countUnreadNotifications,
@@ -73,6 +74,7 @@ export default async function MainLayout({
                 initialItems={notifications}
                 initialUnread={unreadCount}
               />
+              <PushNotificationToggle />
               <form
                 action={async () => {
                   "use server";
