@@ -82,9 +82,9 @@ export type AddMemberState = {
 // Tạo trận cho team (từ team detail). 2 loại:
 // - "opponent": đá kèo — nhập tên đối thủ (opponentName), matchType FIND_OPPONENT.
 // - "internal": đá nội bộ — nhập tên 2 bên (sideAName, sideBName), matchType INTERNAL.
-// Trận đều là LỊCH SẮP TỚI (status OPEN, chưa có tỷ số) + isPrivate=true (không lên /matches).
+// Trận tạo với status OPEN (chưa có tỷ số) + isPrivate=true (không lên /matches).
 // playTime: 1 mốc thời gian "YYYY-MM-DDTHH:mm" (client ghép date+hour) -> transform sang
-// Date +07:00 giống match-form. Phải cách now >= 30 phút (không tạo trong quá khứ).
+// Date +07:00 giống match-form.
 const VN_OFFSET = "+07:00";
 const fieldTypeEnum = z.enum([FieldType.F5, FieldType.F7, FieldType.F11]);
 
@@ -93,10 +93,7 @@ const playTimeSchema = z
   .min(1, "Chọn ngày và giờ đá")
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Giờ đá không hợp lệ")
   .transform((v) => new Date(`${v}:00${VN_OFFSET}`))
-  .refine((d) => !Number.isNaN(d.getTime()), { message: "Giờ đá không hợp lệ" })
-  .refine((d) => d.getTime() - Date.now() >= 30 * 60 * 1000, {
-    message: "Giờ đá phải cách bây giờ ít nhất 30 phút",
-  });
+  .refine((d) => !Number.isNaN(d.getTime()), { message: "Giờ đá không hợp lệ" });
 
 export const createTeamMatchSchema = z
   .object({
@@ -170,4 +167,3 @@ export type CreateTeamMatchState = {
     >
   >;
 };
-

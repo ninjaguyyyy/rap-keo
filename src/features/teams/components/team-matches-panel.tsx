@@ -1,7 +1,7 @@
 // Tab "Trận đấu" trên trang chi tiết đội. 2 section:
 // - "Sắp tới": list trận sắp tới (status OPEN/MATCHED/CONFIRMED) + nút "Tạo trận"
 //   (chỉ owner). Mỗi item = match row giống mock (2 đội + "VS", chưa tỷ số).
-// - "Đã đá": list tất cả trận COMPLETED (có tỷ số, badge W/D/L).
+// - "Đã đá": list trận đã qua giờ đá (có thể chưa cập nhật tỷ số).
 // Mỗi match row: 2 đội đối đầu giữa (avatar + tên) + tỷ số/VS ở giữa, metadata
 // (sân, ngày, loại sân). Opponent/side names resolve ưu tiên: requests ACCEPTED >
 // opponentName/sideA/sideB (trận team tự tạo) > "Đội khách".

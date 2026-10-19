@@ -3,7 +3,7 @@
 // Dialog tạo trận cho team (từ team detail, tab Trận đấu). 2 loại:
 // - "opponent": đá kèo — nhập tên đối thủ (opponentName).
 // - "internal": đá nội bộ — nhập tên 2 bên (sideAName / sideBName).
-// Trận đều sắp tới (status OPEN, chưa tỷ số), isPrivate=true (không lên /matches).
+// Trận tạo với status OPEN (chưa tỷ số), isPrivate=true (không lên /matches).
 // Mirror AddMemberDialog (Dialog render prop + useActionState + segmented toggle).
 import { useActionState, useEffect, useState } from "react";
 import {
@@ -59,7 +59,7 @@ export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
   const [sideAName, setSideAName] = useState<string>("");
   const [sideBName, setSideBName] = useState<string>("");
 
-  // Ghép ngày + giờ -> "YYYY-MM-DDTHH:mm" (server gắn +07:00 + validate >= now+30').
+  // Ghép ngày + giờ -> "YYYY-MM-DDTHH:mm" (server gắn +07:00).
   const playTime = `${playDate}T${playHour}`;
 
   // Tạo xong -> đóng dialog + reset. revalidatePath làm mới list.
@@ -97,7 +97,8 @@ export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
         <DialogHeader>
           <DialogTitle>Tạo trận cho đội</DialogTitle>
           <DialogDescription>
-            Lên lịch trận sắp tới. Trận chỉ hiện trong đội (không lên bảng kèo).
+            Tạo trận cho đội (kể cả trận đã đá). Trận chỉ hiện trong đội (không
+            lên bảng kèo).
           </DialogDescription>
         </DialogHeader>
 

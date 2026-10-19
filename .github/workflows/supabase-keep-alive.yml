@@ -1,0 +1,38 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call keep-alive endpoint
+        env:
+          KEEP_ALIVE_URL: ${{ secrets.KEEP_ALIVE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$KEEP_ALIVE_URL" ]; then
+            echo "Missing KEEP_ALIVE_URL secret"
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET secret"
+            exit 1
+          fi
+
+          STATUS_CODE=$(curl --silent --show-error \
+            --output response.json \
+            --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${KEEP_ALIVE_URL}")
+
+          cat response.json
+
+          if [ "$STATUS_CODE" -lt 200 ] || [ "$STATUS_CODE" -ge 300 ]; then
+            echo "Keep-alive failed with HTTP ${STATUS_CODE}"
+            exit 1
+          fi

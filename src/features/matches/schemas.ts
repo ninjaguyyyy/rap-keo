@@ -24,14 +24,13 @@ const skillTierEnum = z.enum([
 // Giờ VN = UTC+7. Form tách "ngày" (date) + "giờ" (HH:mm slot). Ta ghép thành
 // timestamp +07:00 để lưu đúng ý user, bất kể timezone máy chạy.
 const VN_OFFSET = "+07:00";
-const MIN_PLAYTIME_MS = 30 * 60 * 1000; // không cho tạo kèo trong quá khứ / sát giờ
 
 // Sân: free text (label sân hoặc text tự do). MVP dùng combobox gợi ý 4 sân
 // nhưng cho phép nhập text khác (sân mới). Card display fallback hiện text thô.
 const areaSchema = z.string().trim().min(1, "Chọn sân").max(120, "Tối đa 120 ký tự");
 
 // Mảng timestamp "đã ghép" dạng "YYYY-MM-DDTHH:mm" từ form (client ghép date+slot).
-// Transform sang Date +07:00, validate mỗi combo >= now + 30', loại trùng.
+// Transform sang Date +07:00, validate format/date hợp lệ, loại trùng.
 const playTimesSchema = z
   .array(z.string().min(1))
   .min(1, "Chọn ít nhất 1 giờ đá")
@@ -45,10 +44,6 @@ const playTimesSchema = z
   .refine(
     (arr) => arr.every((d) => !Number.isNaN(d.getTime())),
     { message: "Giờ đá không hợp lệ" },
-  )
-  .refine(
-    (arr) => arr.every((d) => d.getTime() - Date.now() >= MIN_PLAYTIME_MS),
-    { message: "Giờ đá phải cách bây giờ ít nhất 30 phút" },
   )
   // Loại trùng (cùng timestamp) — giữ thứ tự.
   .transform((arr) =>

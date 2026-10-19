@@ -330,7 +330,7 @@ function toTeamMatchFieldErrors(
 // Tạo trận cho team (từ team detail). 2 loại:
 // - kind "opponent": đá kèo — matchType FIND_OPPONENT, opponentName = tên đối thủ.
 // - kind "internal": đá nội bộ — matchType INTERNAL, sideAName/sideBName = 2 bên.
-// Trận đều sắp tới (status OPEN, chưa tỷ số), isPrivate=true (không lên /matches).
+// Trận tạo với status OPEN (chưa tỷ số), isPrivate=true (không lên /matches).
 // Chỉ chủ đội được tạo. skillTiers: mảng rỗng (trận private không lọc trình độ).
 export async function createTeamMatch(
   _prev: CreateTeamMatchState,

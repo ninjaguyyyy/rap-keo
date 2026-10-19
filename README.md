@@ -40,7 +40,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 Supabase free projects can pause after long inactivity. This project includes:
 
 - a keep-alive endpoint: `/api/cron/supabase-keep-alive`
-- a Vercel cron schedule in `vercel.json` (every 12 hours)
+- a GitHub Actions schedule in `.github/workflows/supabase-keep-alive.yml` (every 12 hours)
 - retry logic (`3` attempts) for cold-start wake-up latency
 
 ### Required env vars
@@ -50,8 +50,17 @@ CRON_SECRET=...
 SUPABASE_KEEP_ALIVE_TOKEN=...
 ```
 
-- `CRON_SECRET`: recommended when using Vercel Cron (Vercel sends `Authorization: Bearer <CRON_SECRET>` automatically).
-- `SUPABASE_KEEP_ALIVE_TOKEN`: optional fallback for external cron providers calling `...?token=...`.
+- `CRON_SECRET`: required for scheduled pings via `Authorization: Bearer <CRON_SECRET>`.
+- `SUPABASE_KEEP_ALIVE_TOKEN`: optional fallback for providers calling `...?token=...`.
+
+### GitHub repository secrets
+
+Create these repository secrets:
+
+- `KEEP_ALIVE_URL`: full endpoint URL, e.g. `https://<your-domain>/api/cron/supabase-keep-alive`
+- `CRON_SECRET`: same value as app environment variable `CRON_SECRET`
+
+Then enable the workflow in `.github/workflows/supabase-keep-alive.yml`.
 
 ### Manual check
 

@@ -92,12 +92,16 @@ export async function getTeamUpcomingMatches(teamId: string) {
 
 export type TeamMatchItem = NonNullable<Awaited<ReturnType<typeof getTeamNextMatch>>>;
 
-// Kèo đã đá của đội: status COMPLETED, sort gần nhất trước (KHÔNG limit — lấy tất
-// cả cho tab "Lịch đấu"). Page slice 5 đầu cho card "Previous games" ở Overview.
+// Kèo đã qua giờ đá của đội: gồm cả trận đã cập nhật kết quả (COMPLETED) và trận
+// chưa chốt tỷ số (OPEN/MATCHED/CONFIRMED), sort gần nhất trước (KHÔNG limit — lấy
+// tất cả cho tab "Lịch đấu"). Page slice 5 đầu cho card "Previous games" ở Overview.
 // playTimes naive (UTC wall time) -> lọc trong app: chỉ giữ kèo đã qua giờ đá.
 export async function getTeamMatches(teamId: string) {
   const matches = await db.match.findMany({
-    where: { teamId, status: "COMPLETED" },
+    where: {
+      teamId,
+      status: { in: ["OPEN", "MATCHED", "CONFIRMED", "COMPLETED"] },
+    },
     include: teamMatchInclude,
   });
   const now = Date.now();
@@ -179,4 +183,3 @@ export async function getTeamLeaderboard(
   );
   return rows;
 }
-
