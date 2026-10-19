@@ -27,7 +27,7 @@ export function TeamCard({
           href={`/teams/${team.id}`}
           className="flex min-w-0 flex-1 items-center gap-3"
         >
-          <TeamAvatar name={team.name} size="sm" />
+          <TeamAvatar name={team.name} imageUrl={team.logoUrl} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-bold text-ink">{team.name}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">

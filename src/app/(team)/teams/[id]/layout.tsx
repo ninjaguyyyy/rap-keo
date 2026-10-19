@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { getTeamById } from "@/features/teams/queries";
 import { TeamAvatar } from "@/features/teams/components/team-avatar";
+import { EditTeamAvatarDialog } from "@/features/teams/components/edit-team-avatar-dialog";
 import { MapPinIcon } from "@/features/matches/components/card-shared";
 import { teamSkillTierLabels } from "@/features/teams/labels";
 
@@ -31,6 +32,7 @@ export default async function TeamLayout({
   if (!team) {
     notFound();
   }
+  const canManage = team.ownerId === user.id;
 
   return (
     <div className="min-h-dvh bg-surface-muted">
@@ -77,13 +79,17 @@ export default async function TeamLayout({
 
           {/* Crest + tên + khu vực, canh giữa. Chừa pb lớn hơn để body nhô đè lên. */}
           <div className="flex flex-col items-center gap-2 px-4 pb-10 pt-2 text-center">
-            {/* Crest đội: hiện dùng avatar chữ cái đầu (chưa upload logo).
+            {/* Crest đội: ưu tiên logo upload, fallback chữ cái đầu.
                 Viền trắng + shadow cho nổi trên nền ảnh bìa. */}
-            <TeamAvatar
-              name={team.name}
-              size="lg"
-              className="h-24 w-24 text-4xl shadow-xl ring-4 ring-white/80"
-            />
+            <div className="relative">
+              <TeamAvatar
+                name={team.name}
+                imageUrl={team.logoUrl}
+                size="lg"
+                className="h-24 w-24 text-4xl shadow-xl ring-4 ring-white/80"
+              />
+              {canManage ? <EditTeamAvatarDialog teamId={team.id} /> : null}
+            </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-white drop-shadow">
               {team.name}
             </h1>

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import {
   createTeamSchema,
+  updateTeamLogoSchema,
   addMemberSchema,
   createTeamMatchSchema,
   type TeamFormState,
@@ -12,14 +13,20 @@ import {
   type CreateTeamMatchState,
 } from "./schemas";
 import { MatchType, TeamRole } from "@/generated/prisma/enums";
-import { uploadTeamCover, deleteTeamCover } from "@/lib/supabase-storage";
+import {
+  uploadTeamCover,
+  deleteTeamCover,
+  uploadTeamLogo,
+  deleteTeamLogo,
+} from "@/lib/supabase-storage";
 
-// Giới hạn upload ảnh bìa: loại MIME + dung lượng tối đa (5MB).
-const COVER_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const COVER_MAX_BYTES = 5 * 1024 * 1024;
+// Giới hạn upload ảnh đội (cover/logo): loại MIME + dung lượng tối đa (5MB).
+const TEAM_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const TEAM_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 // Kết quả chung cho action đơn (deleteTeam) — mirror MatchActionState.
 export type TeamActionState = { ok?: true; error?: string };
+export type TeamLogoActionState = { ok?: true; error?: string };
 
 // Map lỗi zod -> fieldErrors (chỉ lấy message đầu cho mỗi field). Giống createMatch.
 function toFieldErrors(
@@ -112,10 +119,10 @@ export async function updateTeam(
   const coverEntry = formData.get("cover");
   let coverUrl: string | undefined;
   if (coverEntry instanceof File && coverEntry.size > 0) {
-    if (!COVER_ALLOWED_TYPES.includes(coverEntry.type)) {
+    if (!TEAM_IMAGE_ALLOWED_TYPES.includes(coverEntry.type)) {
       return { error: "Chỉ nhận ảnh JPG, PNG hoặc WebP." };
     }
-    if (coverEntry.size > COVER_MAX_BYTES) {
+    if (coverEntry.size > TEAM_IMAGE_MAX_BYTES) {
       return { error: "Ảnh bìa tối đa 5MB." };
     }
     try {
@@ -148,6 +155,66 @@ export async function updateTeam(
   } catch (err) {
     console.error("updateTeam error:", err);
     return { error: "Không cập nhật được đội. Thử lại nhé." };
+  }
+}
+
+// Cập nhật avatar/logo đội từ header trang chi tiết. Chỉ chủ đội được sửa.
+export async function updateTeamLogo(
+  _prev: TeamLogoActionState,
+  formData: FormData,
+): Promise<TeamLogoActionState> {
+  const user = await requireUser();
+
+  const parsed = updateTeamLogoSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) {
+    return { error: "Đội không hợp lệ." };
+  }
+
+  const existing = await db.team.findUnique({
+    where: { id: parsed.data.id },
+    select: { ownerId: true, logoUrl: true },
+  });
+  if (!existing) return { error: "Đội không tồn tại." };
+  if (existing.ownerId !== user.id) {
+    return { error: "Bạn không có quyền sửa đội này." };
+  }
+
+  const logoEntry = formData.get("logo");
+  if (!(logoEntry instanceof File) || logoEntry.size === 0) {
+    return { error: "Vui lòng chọn ảnh avatar đội." };
+  }
+  if (!TEAM_IMAGE_ALLOWED_TYPES.includes(logoEntry.type)) {
+    return { error: "Chỉ nhận ảnh JPG, PNG hoặc WebP." };
+  }
+  if (logoEntry.size > TEAM_IMAGE_MAX_BYTES) {
+    return { error: "Ảnh avatar tối đa 5MB." };
+  }
+
+  let newLogoUrl: string | null = null;
+  try {
+    const uploaded = await uploadTeamLogo(logoEntry, parsed.data.id);
+    newLogoUrl = uploaded.publicUrl;
+
+    await db.team.update({
+      where: { id: parsed.data.id },
+      data: { logoUrl: newLogoUrl },
+    });
+
+    if (existing.logoUrl) {
+      await deleteTeamLogo(existing.logoUrl);
+    }
+
+    revalidatePath("/teams");
+    revalidatePath(`/teams/${parsed.data.id}`);
+    return { ok: true };
+  } catch (err) {
+    if (newLogoUrl) {
+      await deleteTeamLogo(newLogoUrl);
+    }
+    console.error("updateTeamLogo error:", err);
+    return { error: "Không cập nhật được avatar đội. Thử lại nhé." };
   }
 }
 

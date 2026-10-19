@@ -27,6 +27,11 @@ export const createTeamSchema = z.object({
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
 
+// Upload avatar đội: chỉ cần id đội (file validate ở server action).
+export const updateTeamLogoSchema = z.object({
+  id: z.string().uuid(),
+});
+
 // State cho useActionState: fieldErrors cho từng trường, error chung.
 export type TeamFormState = {
   ok?: boolean;

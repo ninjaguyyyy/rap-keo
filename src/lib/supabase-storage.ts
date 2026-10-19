@@ -30,17 +30,20 @@ function getAdminClient(): SupabaseClient {
 // Kết quả upload: storage path + public URL.
 export type UploadResult = { path: string; publicUrl: string };
 
-// Upload 1 file làm ảnh bìa đội. Path: team-assets/{teamId}/{uuid}.{ext}.
-// Upsert true: trùng tên thì ghi đè (không xảy ra vì uuid trong path).
-export async function uploadTeamCover(
+function sanitizeExtension(fileName: string): string {
+  // Lấy ext từ tên file, fallback "webp". Trim ký tự lạ.
+  const rawExt = fileName.split(".").pop() ?? "webp";
+  return rawExt.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "webp";
+}
+
+async function uploadTeamAsset(
   file: File,
   teamId: string,
+  folder: "cover" | "logo",
 ): Promise<UploadResult> {
   const supabase = getAdminClient();
-  // Lấy ext từ tên file, fallback "webp". Trim ký tự lạ.
-  const rawExt = file.name.split(".").pop() ?? "webp";
-  const ext = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "webp";
-  const path = `${teamId}/${crypto.randomUUID()}.${ext}`;
+  const ext = sanitizeExtension(file.name);
+  const path = `${teamId}/${folder}/${crypto.randomUUID()}.${ext}`;
   const body = Buffer.from(await file.arrayBuffer());
   const { error } = await supabase.storage
     .from(SUPABASE_TEAM_BUCKET)
@@ -56,9 +59,25 @@ export async function uploadTeamCover(
   return { path, publicUrl: data.publicUrl };
 }
 
-// Xoá 1 ảnh bìa cũ từ URL lưu DB. Parse path sau "/public/<bucket>/" trong URL.
-// Best-effort: lỗi chỉ log, không ném ra ngoài.
-export async function deleteTeamCover(storedUrl: string): Promise<void> {
+// Upload 1 file làm ảnh bìa đội.
+export async function uploadTeamCover(
+  file: File,
+  teamId: string,
+): Promise<UploadResult> {
+  return uploadTeamAsset(file, teamId, "cover");
+}
+
+// Upload 1 file làm avatar/logo đội.
+export async function uploadTeamLogo(
+  file: File,
+  teamId: string,
+): Promise<UploadResult> {
+  return uploadTeamAsset(file, teamId, "logo");
+}
+
+// Xoá 1 file cũ trong team-assets từ URL lưu DB. Parse path sau
+// "/public/<bucket>/" trong URL. Best-effort: lỗi chỉ log, không ném ra ngoài.
+async function deleteTeamAsset(storedUrl: string): Promise<void> {
   try {
     const supabase = getAdminClient();
     const marker = `/public/${SUPABASE_TEAM_BUCKET}/`;
@@ -68,8 +87,16 @@ export async function deleteTeamCover(storedUrl: string): Promise<void> {
     if (!path) return;
     await supabase.storage.from(SUPABASE_TEAM_BUCKET).remove([path]);
   } catch (err) {
-    console.warn("deleteTeamCover (non-fatal):", err);
+    console.warn("deleteTeamAsset (non-fatal):", err);
   }
+}
+
+export async function deleteTeamCover(storedUrl: string): Promise<void> {
+  await deleteTeamAsset(storedUrl);
+}
+
+export async function deleteTeamLogo(storedUrl: string): Promise<void> {
+  await deleteTeamAsset(storedUrl);
 }
 
 // --- Tournament banner ---
