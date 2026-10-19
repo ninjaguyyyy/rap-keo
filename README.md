@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Supabase free keep-alive
+
+Supabase free projects can pause after long inactivity. This project includes:
+
+- a keep-alive endpoint: `/api/cron/supabase-keep-alive`
+- a Vercel cron schedule in `vercel.json` (every 12 hours)
+- retry logic (`3` attempts) for cold-start wake-up latency
+
+### Required env vars
+
+```env
+CRON_SECRET=...
+SUPABASE_KEEP_ALIVE_TOKEN=...
+```
+
+- `CRON_SECRET`: recommended when using Vercel Cron (Vercel sends `Authorization: Bearer <CRON_SECRET>` automatically).
+- `SUPABASE_KEEP_ALIVE_TOKEN`: optional fallback for external cron providers calling `...?token=...`.
+
+### Manual check
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://<your-domain>/api/cron/supabase-keep-alive
+```
