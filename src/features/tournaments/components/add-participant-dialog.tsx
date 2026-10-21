@@ -118,7 +118,7 @@ export function AddParticipantDialog({
               <Select value={teamId} onValueChange={(v) => setTeamId(String(v))}>
                 <SelectTrigger id="participant-team" className="h-11 w-full">
                   <SelectValue placeholder="Chọn đội">
-                    {teamOptions.find((t) => t.id === teamId)?.name}
+                    {teamOptions.find((t) => t.id === teamId)?.name ?? ""}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

@@ -138,7 +138,7 @@ export function AddTournamentPlayerDialog({
               <Select value={userId} onValueChange={(v) => setUserId(String(v))}>
                 <SelectTrigger id="player-member" className="h-11 w-full">
                   <SelectValue placeholder="Chọn cầu thủ">
-                    {availableMembers.find((m) => m.userId === userId)?.name}
+                    {availableMembers.find((m) => m.userId === userId)?.name ?? ""}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

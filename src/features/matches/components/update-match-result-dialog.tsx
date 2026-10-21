@@ -58,6 +58,9 @@ export function UpdateMatchResultDialog({
     match.awayScore?.toString() ?? "0",
   );
   const [scorers, setScorers] = useState<ScorerRow[]>(() => initialScorers());
+  const memberLabelById = new Map(
+    members.map((m) => [m.userId, m.user.name ?? m.user.phone ?? "—"]),
+  );
 
   // Lưu xong -> đóng dialog. revalidatePath làm mới hero + tabs.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -191,7 +194,9 @@ export function UpdateMatchResultDialog({
                       onValueChange={(v) => setScorerField(idx, "scorerId", String(v))}
                     >
                       <SelectTrigger className="h-10 w-full" aria-label="Người ghi bàn">
-                        <SelectValue placeholder="Ghi bàn" />
+                        <SelectValue placeholder="Ghi bàn">
+                          {memberLabelById.get(row.scorerId) ?? ""}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {members.map((m) => (
@@ -208,7 +213,9 @@ export function UpdateMatchResultDialog({
                       onValueChange={(v) => setScorerField(idx, "assistId", String(v))}
                     >
                       <SelectTrigger className="h-10 w-full" aria-label="Người kiến tạo">
-                        <SelectValue placeholder="Kiến tạo (tùy chọn)" />
+                        <SelectValue placeholder="Kiến tạo (tùy chọn)">
+                          {memberLabelById.get(row.assistId) ?? ""}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {members.map((m) => (

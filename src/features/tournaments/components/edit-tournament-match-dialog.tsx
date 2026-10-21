@@ -41,6 +41,15 @@ type ScorerRow = {
   side: "home" | "away";
 };
 
+function getPlayerKey(player: TournamentPlayerItem): string {
+  return player.userId ? `u:${player.userId}` : `p:${player.id}`;
+}
+
+function getPlayerLabel(player: TournamentPlayerItem): string {
+  const prefix = player.jerseyNumber != null ? `${player.jerseyNumber}. ` : "";
+  return `${prefix}${player.displayName}`;
+}
+
 // Date -> "YYYY-MM-DDTHH:mm" theo giờ VN (UTC+7) cho <input datetime-local>.
 // Trả "" nếu date null/invalid. Dùng offset thủ công (không thêm Intl object).
 function dateToLocalInput(d: Date | null | undefined): string {
@@ -152,6 +161,7 @@ export function EditTournamentMatchDialog({
   function renderScorerRow(row: ScorerRow, idx: number) {
     const players = row.side === "home" ? homePlayers : awayPlayers;
     const sideLabel = row.side === "home" ? homeLabel : awayLabel;
+    const labelByKey = new Map(players.map((player) => [getPlayerKey(player), getPlayerLabel(player)]));
     return (
       <li
         key={idx}
@@ -191,7 +201,9 @@ export function EditTournamentMatchDialog({
               onValueChange={(v) => setScorerField(idx, "scorerKey", String(v))}
             >
               <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Chọn" />
+                <SelectValue placeholder="Chọn">
+                  {labelByKey.get(row.scorerKey) ?? ""}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {players.length === 0 ? (
@@ -200,11 +212,10 @@ export function EditTournamentMatchDialog({
                   </SelectItem>
                 ) : (
                   players.map((pl) => {
-                    const key = pl.userId ? `u:${pl.userId}` : `p:${pl.id}`;
+                    const key = getPlayerKey(pl);
                     return (
                       <SelectItem key={pl.id} value={key}>
-                        {pl.jerseyNumber != null ? `${pl.jerseyNumber}. ` : ""}
-                        {pl.displayName}
+                        {getPlayerLabel(pl)}
                       </SelectItem>
                     );
                   })
@@ -219,19 +230,20 @@ export function EditTournamentMatchDialog({
               onValueChange={(v) => setScorerField(idx, "assistKey", String(v))}
             >
               <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="(không)" />
+                <SelectValue placeholder="(không)">
+                  {labelByKey.get(row.assistKey) ?? ""}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {players.map((pl) => {
-                  const key = pl.userId ? `u:${pl.userId}` : `p:${pl.id}`;
+                  const key = getPlayerKey(pl);
                   return (
                     <SelectItem
                       key={pl.id}
                       value={key}
                       disabled={key === row.scorerKey}
                     >
-                      {pl.jerseyNumber != null ? `${pl.jerseyNumber}. ` : ""}
-                      {pl.displayName}
+                      {getPlayerLabel(pl)}
                     </SelectItem>
                   );
                 })}
