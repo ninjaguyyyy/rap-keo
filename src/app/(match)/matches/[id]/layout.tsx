@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { getMatchById } from "@/features/matches/queries";
+import { getMatchById, getMatchByIdForVoteLink } from "@/features/matches/queries";
 import { resolveSides } from "@/features/matches/components/card-shared";
 import { TeamAvatar } from "@/features/teams/components/team-avatar";
 
@@ -11,7 +11,8 @@ import { TeamAvatar } from "@/features/teams/components/team-avatar";
 // tỷ số lớn ở giữa (theo mock). Nội dung page (tabs) render dưới header.
 //
 // getMatchById: public match xem được cả khi chưa login; private (team tự tạo)
-// chỉ owner/thành viên — ngoài ra notFound(). Lấy viewer userId (nếu có) để check.
+// chỉ owner/thành viên. Tuy nhiên link chi tiết trận được phép xem public nên
+// fallback sang getMatchByIdForVoteLink để guest vẫn thấy đầy đủ layout/header.
 export default async function MatchLayout({
   children,
   params,
@@ -21,10 +22,11 @@ export default async function MatchLayout({
 }) {
   const { id } = await params;
   const viewer = await getCurrentUser();
-  const match = await getMatchById(id, viewer?.id);
-  if (!match) {
-    notFound();
-  }
+  const memberAccessibleMatch = await getMatchById(id, viewer?.id);
+  const match = memberAccessibleMatch ?? (await getMatchByIdForVoteLink(id));
+  if (!match) notFound();
+  const canOpenTeamPage = Boolean(memberAccessibleMatch && match.isPrivate && match.teamId);
+  const backHref = canOpenTeamPage ? `/teams/${match.teamId}` : "/matches";
 
   // Tên đội nhà: team.name nếu có, fallback "Đội nhà". INTERNAL không có team thật.
   const teamName = match.team?.name ?? "Đội nhà";
@@ -44,7 +46,7 @@ export default async function MatchLayout({
           {/* Nút back góc trên-trái. Public match về /matches; private về team. */}
           <div className="px-4 pt-4">
             <Link
-              href={match.isPrivate && match.teamId ? `/teams/${match.teamId}` : "/matches"}
+              href={backHref}
               aria-label="Quay lại"
               className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/25"
             >

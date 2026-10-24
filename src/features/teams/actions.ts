@@ -7,9 +7,11 @@ import {
   createTeamSchema,
   updateTeamLogoSchema,
   addMemberSchema,
+  updateTeamMemberSchema,
   createTeamMatchSchema,
   type TeamFormState,
   type AddMemberState,
+  type UpdateTeamMemberState,
   type CreateTeamMatchState,
 } from "./schemas";
 import { MatchType, TeamRole } from "@/generated/prisma/enums";
@@ -273,19 +275,26 @@ export async function addTeamMember(
     mode: formData.get("mode"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    jerseyNumber: formData.get("jerseyNumber"),
   });
   if (!parsed.success) {
     const fieldErrors: NonNullable<AddMemberState["fieldErrors"]> = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
-      if (key === "name" || key === "phone") {
+      if (key === "name" || key === "phone" || key === "jerseyNumber") {
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
     }
     return { fieldErrors };
   }
 
-  const { teamId, mode, name, phone } = parsed.data;
+  const {
+    teamId,
+    mode,
+    name,
+    phone,
+    jerseyNumber,
+  } = parsed.data;
   const owned = await getOwnedTeam(teamId, user.id);
   if ("error" in owned) return { error: owned.error };
 
@@ -297,7 +306,12 @@ export async function addTeamMember(
         data: { name: name!, isGuest: true },
       });
       await db.teamMember.create({
-        data: { teamId, userId: guest.id, role: TeamRole.MEMBER },
+        data: {
+          teamId,
+          userId: guest.id,
+          role: TeamRole.MEMBER,
+          jerseyNumber: jerseyNumber ?? null,
+        },
       });
       revalidatePath(`/teams/${teamId}`);
       return { ok: true };
@@ -324,7 +338,12 @@ export async function addTeamMember(
     }
 
     await db.teamMember.create({
-      data: { teamId, userId: target.id, role: TeamRole.MEMBER },
+      data: {
+        teamId,
+        userId: target.id,
+        role: TeamRole.MEMBER,
+        jerseyNumber: jerseyNumber ?? null,
+      },
     });
     revalidatePath(`/teams/${teamId}`);
     return { ok: true };
@@ -364,6 +383,74 @@ export async function removeTeamMember(args: {
   } catch (err) {
     console.error("removeTeamMember error:", err);
     return { error: "Không xóa được thành viên. Thử lại nhé." };
+  }
+}
+
+// Sửa thông tin cầu thủ (tên + quê quán + số áo): owner thao tác.
+// - name để trống: giữ nguyên tên cũ.
+// - hometown để trống: xoá quê quán.
+// - jerseyNumber để trống: xoá số áo.
+export async function updateTeamMember(
+  _prev: UpdateTeamMemberState,
+  formData: FormData,
+): Promise<UpdateTeamMemberState> {
+  const user = await requireUser();
+
+  const parsed = updateTeamMemberSchema.safeParse({
+    teamId: formData.get("teamId"),
+    userId: formData.get("userId"),
+    name: formData.get("name"),
+    hometown: formData.get("hometown"),
+    jerseyNumber: formData.get("jerseyNumber"),
+  });
+  if (!parsed.success) {
+    const fieldErrors: NonNullable<UpdateTeamMemberState["fieldErrors"]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (key === "name" && !fieldErrors.name) {
+        fieldErrors.name = issue.message;
+      }
+      if (key === "hometown" && !fieldErrors.hometown) {
+        fieldErrors.hometown = issue.message;
+      }
+      if (key === "jerseyNumber" && !fieldErrors.jerseyNumber) {
+        fieldErrors.jerseyNumber = issue.message;
+      }
+    }
+    return { fieldErrors };
+  }
+
+  const { teamId, userId, name, hometown, jerseyNumber } = parsed.data;
+  const owned = await getOwnedTeam(teamId, user.id);
+  if ("error" in owned) return { error: owned.error };
+
+  const member = await db.teamMember.findUnique({
+    where: { teamId_userId: { teamId, userId } },
+    select: { id: true },
+  });
+  if (!member) return { error: "Thành viên không tồn tại trong đội." };
+
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.teamMember.update({
+        where: { teamId_userId: { teamId, userId } },
+        data: { jerseyNumber: jerseyNumber ?? null },
+      });
+      if (name !== undefined || hometown !== undefined) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            ...(name !== undefined ? { name } : {}),
+            ...(hometown !== undefined ? { hometown } : {}),
+          },
+        });
+      }
+    });
+    revalidatePath(`/teams/${teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("updateTeamMember error:", err);
+    return { error: "Không cập nhật được cầu thủ. Thử lại nhé." };
   }
 }
 
@@ -431,22 +518,40 @@ export async function createTeamMatch(
   const opponentName = isInternal ? null : parsed.data.opponentName!;
 
   try {
-    await db.match.create({
-      data: {
-        creatorId: user.id,
-        teamId,
-        matchType,
-        fieldType,
-        // Trận private không lọc trình độ (mảng rỗng).
-        skillTiers: [],
-        area: area || null,
-        playTimes: [playTime],
-        status: "OPEN",
-        isPrivate: true,
-        opponentName,
-        sideAName,
-        sideBName,
-      },
+    await db.$transaction(async (tx) => {
+      const match = await tx.match.create({
+        data: {
+          creatorId: user.id,
+          teamId,
+          matchType,
+          fieldType,
+          // Trận private không lọc trình độ (mảng rỗng).
+          skillTiers: [],
+          area: area || null,
+          playTimes: [playTime],
+          status: "OPEN",
+          isPrivate: true,
+          opponentName,
+          sideAName,
+          sideBName,
+          squadSeededAt: new Date(),
+        },
+      });
+
+      const teamMembers = await tx.teamMember.findMany({
+        where: { teamId },
+        select: { userId: true },
+      });
+      if (teamMembers.length === 0) return;
+
+      await tx.matchSquadMember.createMany({
+        data: teamMembers.map((member) => ({
+          matchId: match.id,
+          userId: member.userId,
+          internalSide: null,
+        })),
+        skipDuplicates: true,
+      });
     });
     revalidatePath(`/teams/${teamId}`);
     return { ok: true };

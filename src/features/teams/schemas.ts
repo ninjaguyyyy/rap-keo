@@ -39,6 +39,35 @@ export type TeamFormState = {
   fieldErrors?: Partial<Record<keyof CreateTeamInput, string>>;
 };
 
+const memberNameSchema = z
+  .string()
+  .trim()
+  .min(2, "Tên thành viên tối thiểu 2 ký tự")
+  .max(50, "Tên thành viên tối đa 50 ký tự");
+
+const hometownSchema = z
+  .string()
+  .trim()
+  .max(80, "Quê quán tối đa 80 ký tự");
+
+const jerseyNumberSchema = z.preprocess(
+  (value) => {
+    if (value == null) return undefined;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return undefined;
+      return Number(trimmed);
+    }
+    return value;
+  },
+  z
+    .number()
+    .int("Số áo phải là số nguyên.")
+    .min(1, "Số áo từ 1 đến 99.")
+    .max(99, "Số áo từ 1 đến 99.")
+    .optional(),
+);
+
 // Thêm thành viên: 2 chế độ — "name" (khách, chỉ tên) hoặc "phone" (user đã đăng ký).
 // teamId đi qua hidden input. phoneSchema (regex VN /^0\d{9,10}$/) tái dùng từ auth.
 // name/phone dùng .nullish() vì FormData.get() trả null khi field không render
@@ -48,14 +77,11 @@ export const addMemberSchema = z
     teamId: z.string().uuid(),
     mode: z.enum(["name", "phone"]),
     // name dùng cho mode "name": tối thiểu 2, tối đa 50 ký tự.
-    name: z
-      .string()
-      .trim()
-      .min(2, "Tên thành viên tối thiểu 2 ký tự")
-      .max(50, "Tên thành viên tối đa 50 ký tự")
-      .nullish(),
+    name: memberNameSchema.nullish(),
     // phone dùng cho mode "phone".
     phone: phoneSchema.nullish(),
+    // jerseyNumber tùy chọn: 1-99. Blank/null -> undefined.
+    jerseyNumber: jerseyNumberSchema,
   })
   // Bắt buộc field đúng theo mode + gắn lỗi đúng field (name hoặc phone) để UI hiện.
   .superRefine((data, ctx) => {
@@ -81,7 +107,45 @@ export type AddMemberInput = z.infer<typeof addMemberSchema>;
 export type AddMemberState = {
   ok?: boolean;
   error?: string;
-  fieldErrors?: Partial<Record<"name" | "phone", string>>;
+  fieldErrors?: Partial<Record<"name" | "phone" | "jerseyNumber", string>>;
+};
+
+export const updateTeamMemberSchema = z.object({
+  teamId: z.string().uuid(),
+  userId: z.string().uuid(),
+  name: z.preprocess(
+    (value) => {
+      if (value == null) return undefined;
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return undefined;
+        return trimmed;
+      }
+      return value;
+    },
+    memberNameSchema.optional(),
+  ),
+  hometown: z.preprocess(
+    (value) => {
+      if (value == null) return undefined;
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        return trimmed;
+      }
+      return value;
+    },
+    hometownSchema.nullable().optional(),
+  ),
+  jerseyNumber: jerseyNumberSchema,
+});
+
+export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>;
+
+export type UpdateTeamMemberState = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<"name" | "hometown" | "jerseyNumber", string>>;
 };
 
 // Tạo trận cho team (từ team detail). 2 loại:

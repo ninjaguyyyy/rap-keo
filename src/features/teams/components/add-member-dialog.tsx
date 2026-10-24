@@ -32,6 +32,7 @@ export function AddMemberDialog({ teamId }: { teamId: string }) {
   const [mode, setMode] = useState<Mode>("name");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [jerseyNumber, setJerseyNumber] = useState("");
 
   // Thêm xong -> đóng dialog + reset input. revalidatePath làm mới list.
   // Side-effect có chủ đích: sync kết quả server action (state.ok) về UI state.
@@ -41,6 +42,7 @@ export function AddMemberDialog({ teamId }: { teamId: string }) {
       setOpen(false);
       setName("");
       setPhone("");
+      setJerseyNumber("");
     }
   }, [state]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -132,6 +134,27 @@ export function AddMemberDialog({ teamId }: { teamId: string }) {
               ) : null}
             </div>
           )}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="member-jersey">Số áo (tùy chọn)</Label>
+            <Input
+              id="member-jersey"
+              name="jerseyNumber"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={99}
+              value={jerseyNumber}
+              onChange={(e) => setJerseyNumber(e.target.value)}
+              placeholder="VD: 10"
+              aria-invalid={!!state.fieldErrors?.jerseyNumber}
+            />
+            {state.fieldErrors?.jerseyNumber ? (
+              <p className="text-sm text-destructive">
+                {state.fieldErrors.jerseyNumber}
+              </p>
+            ) : null}
+          </div>
 
           {state.error ? (
             <p className="text-sm text-destructive">{state.error}</p>

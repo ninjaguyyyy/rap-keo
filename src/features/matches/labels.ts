@@ -1,6 +1,7 @@
 // Nhãn tiếng Việt cho các enum của Match (hiển thị cho người dùng).
 import type {
   FieldType,
+  InternalSquadSide,
   MatchSkillTier,
   MatchStatus,
   MatchType,
@@ -73,6 +74,12 @@ export const matchRequestStatusLabels: Record<MatchRequestStatus, string> = {
   ACCEPTED: "Đã chấp nhận",
   REJECTED: "Đã từ chối",
   CANCELLED: "Đã hủy",
+};
+
+export const internalSquadSideLabels: Record<InternalSquadSide, string> = {
+  SIDE_A: "Bên A",
+  SIDE_B: "Bên B",
+  BENCH: "Dự bị",
 };
 
 // Định dạng thời gian đá (giờ Việt Nam).

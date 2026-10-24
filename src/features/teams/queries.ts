@@ -126,7 +126,16 @@ export async function listTeamMembers(teamId: string) {
   return db.teamMember.findMany({
     where: { teamId },
     include: {
-      user: { select: { id: true, name: true, phone: true, avatarUrl: true, isGuest: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          hometown: true,
+          avatarUrl: true,
+          isGuest: true,
+        },
+      },
     },
     // OWNER > MEMBER (enum thứ tự: OWNER=0? — sort an toàn bằng role string desc).
     orderBy: [{ role: "desc" }, { joinedAt: "asc" }],
@@ -142,6 +151,20 @@ export type LeaderboardRow = {
   goals: number;
   assists: number;
   points: number;
+};
+
+export type TeamPlayerStandingRow = {
+  userId: string;
+  name: string;
+  jerseyNumber: number | null;
+  rank: number;
+  goals: number;
+  assists: number;
+  saves: number;
+  mvpAwards: number;
+  matches: number;
+  points: number;
+  pointsPerMatch: number;
 };
 
 // Top vua phá lùng / kiến tạo của đội: groupBy PlayerStat theo userId, _sum goals
@@ -181,5 +204,102 @@ export async function getTeamLeaderboard(
   rows.sort(
     (a, b) => b.goals - a.goals || b.points - a.points || b.assists - a.assists,
   );
+  return rows;
+}
+
+// Bảng xếp hạng cầu thủ all-time của đội. Công thức điểm:
+// - Goal: +2
+// - Assist: +1
+// - Save: +1
+// - MVP: +3 (đếm số phiên vote MVP đã đóng có winnerUserId = user)
+// matches = số trận có dòng PlayerStat (trận có đóng góp stats).
+export async function getTeamPlayerStandings(
+  teamId: string,
+): Promise<TeamPlayerStandingRow[]> {
+  const [members, stats, mvpWins] = await Promise.all([
+    listTeamMembers(teamId),
+    db.playerStat.groupBy({
+      by: ["userId"],
+      where: {
+        teamId,
+        userId: { not: null },
+      },
+      _sum: { goals: true, assists: true, saves: true },
+      _count: { _all: true },
+    }),
+    db.matchMvpVoteSession.groupBy({
+      by: ["winnerUserId"],
+      where: {
+        closedAt: { not: null },
+        winnerUserId: { not: null },
+        match: { teamId },
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const memberNameById = new Map(
+    members.map((member) => [member.userId, member.user.name ?? member.user.phone ?? "—"]),
+  );
+  const statsByUserId = new Map<
+    string,
+    { goals: number; assists: number; saves: number; matches: number }
+  >(
+    stats
+      .filter((stat) => stat.userId != null)
+      .map((stat) => [
+        stat.userId as string,
+        {
+          goals: stat._sum.goals ?? 0,
+          assists: stat._sum.assists ?? 0,
+          saves: stat._sum.saves ?? 0,
+          matches: stat._count._all,
+        },
+      ]),
+  );
+  const mvpAwardsByUserId = new Map(
+    mvpWins
+      .filter((session) => session.winnerUserId != null)
+      .map((session) => [session.winnerUserId as string, session._count._all]),
+  );
+
+  const rows = members
+    .map((member) => {
+      const memberStats = statsByUserId.get(member.userId);
+      const goals = memberStats?.goals ?? 0;
+      const assists = memberStats?.assists ?? 0;
+      const saves = memberStats?.saves ?? 0;
+      const mvpAwards = mvpAwardsByUserId.get(member.userId) ?? 0;
+      const matches = memberStats?.matches ?? 0;
+      const points = goals * 2 + assists + saves + mvpAwards * 3;
+      const pointsPerMatch = matches > 0 ? points / matches : 0;
+
+      return {
+        userId: member.userId,
+        name: memberNameById.get(member.userId) ?? "—",
+        jerseyNumber: member.jerseyNumber,
+        rank: 0,
+        goals,
+        assists,
+        saves,
+        mvpAwards,
+        matches,
+        points,
+        pointsPerMatch,
+      };
+    })
+    .sort((a, b) =>
+      b.points - a.points
+      || b.goals - a.goals
+      || b.assists - a.assists
+      || b.saves - a.saves
+      || b.mvpAwards - a.mvpAwards
+      || a.name.localeCompare(b.name),
+    )
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
+    }));
+
   return rows;
 }

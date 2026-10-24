@@ -1,6 +1,11 @@
 // Zod schema cho form tạo kèo. Enum validate chặt theo Prisma enum.
 import { z } from "zod";
-import { FieldType, MatchSkillTier, MatchType } from "@/generated/prisma/enums";
+import {
+  FieldType,
+  InternalSquadSide,
+  MatchSkillTier,
+  MatchType,
+} from "@/generated/prisma/enums";
 
 // Giá trị enum hợp lệ (dùng cho z.enum literal).
 const matchTypeEnum = z.enum([
@@ -81,7 +86,7 @@ export type CreateMatchState = {
 };
 
 // Cập nhật kết quả trận (popup trên match detail). Tỷ số 2 bên + danh sách bàn
-// của đội nhà (mỗi bàn: scorer + kiến tạo tùy chọn, chọn từ thành viên đội).
+// của đội nhà (mỗi bàn: scorer + kiến tạo tùy chọn) + cứu thua (cầu thủ + số pha).
 // Cập nhật = set status COMPLETED (đã đá) + ghi PlayerStat.
 const scoreSchema = z
   .number()
@@ -95,6 +100,16 @@ const scorerSchema = z.object({
   assistId: z.string().uuid().nullish(),
 });
 
+// 1 dòng cứu thua: chọn cầu thủ + số pha cứu thua.
+const saveSchema = z.object({
+  userId: z.string().uuid("Chọn cầu thủ cứu thua"),
+  count: z
+    .number()
+    .int("Số pha cứu thua không hợp lệ")
+    .min(1, "Ít nhất 1 pha cứu thua")
+    .max(50, "Tối đa 50 pha cứu thua"),
+});
+
 export const updateMatchResultSchema = z
   .object({
     matchId: z.string().uuid(),
@@ -102,6 +117,7 @@ export const updateMatchResultSchema = z
     awayScore: scoreSchema,
     // Mảng bàn (dynamic rows). Có thể ít hơn homeScore (không ghi đủ cũng OK).
     scorers: z.array(scorerSchema).max(50, "Quá nhiều bàn").default([]),
+    saves: z.array(saveSchema).max(50, "Quá nhiều dòng cứu thua").default([]),
   })
   // assistId không được trùng scorerId (không tự kiến tạo cho mình).
   .superRefine((data, ctx) => {
@@ -121,5 +137,11 @@ export type UpdateMatchResultInput = z.infer<typeof updateMatchResultSchema>;
 export type UpdateMatchResultState = {
   ok?: boolean;
   error?: string;
-  fieldErrors?: Partial<Record<"homeScore" | "awayScore" | "scorers", string>>;
+  fieldErrors?: Partial<Record<"homeScore" | "awayScore" | "scorers" | "saves", string>>;
 };
+
+export const updateInternalSquadSideSchema = z.object({
+  matchId: z.string().uuid(),
+  userId: z.string().uuid(),
+  side: z.enum([InternalSquadSide.SIDE_A, InternalSquadSide.SIDE_B]),
+});

@@ -2,7 +2,7 @@
 
 // Tabs trên trang chi tiết đội /teams/[id]. Dùng Tabs component (underline style,
 // gạch chân vàng ở tab active) theo mẫu team detail. Tab "Tổng quan" có Next match
-// + Previous games + info đội; Đội hình / Lịch đấu / Bảng là placeholder "Sắp có".
+// + Previous games + info đội; thêm tab "BXH cầu thủ" tính điểm theo thống kê.
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import type {
   TeamRecentMatch,
   TeamMemberItem,
   LeaderboardRow,
+  TeamPlayerStandingRow,
 } from "../queries";
 import { EditTeamDialog } from "./edit-team-dialog";
 import { DeleteTeamButton } from "./delete-team-button";
@@ -25,20 +26,16 @@ import {
 import { MemberList } from "./member-list";
 import { LeaderboardCard } from "./leaderboard-card";
 import { TeamMatchesPanel } from "./team-matches-panel";
+import { TeamPlayerStandingsCard } from "./team-player-standings-card";
 
 type TabId = "overview" | "squad" | "matches" | "table";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Tổng quan" },
-  { id: "table", label: "Bảng" },
+  { id: "table", label: "BXH cầu thủ" },
   { id: "squad", label: "Đội hình" },
   { id: "matches", label: "Trận đấu" },
 ];
-
-// Subtext cho từng tab placeholder.
-const COMING_SOON_TEXT: Record<Exclude<TabId, "overview" | "squad" | "matches">, string> = {
-  table: "Bảng xếp hạng đang được xây dựng.",
-};
 
 export function TeamDetailTabs({
   team,
@@ -48,6 +45,7 @@ export function TeamDetailTabs({
   upcoming,
   members,
   leaderboard,
+  playerStandings,
 }: {
   team: TeamDetail;
   canManage: boolean;
@@ -56,6 +54,7 @@ export function TeamDetailTabs({
   upcoming: TeamMatchItem[];
   members: TeamMemberItem[];
   leaderboard: LeaderboardRow[];
+  playerStandings: TeamPlayerStandingRow[];
 }) {
   const router = useRouter();
   // Card "Previous games" ở Overview chỉ hiện 5 trận gần nhất; tab Matches hiện hết.
@@ -132,35 +131,11 @@ export function TeamDetailTabs({
               past={matches}
               canManage={canManage}
             />
-          ) : (
-            <ComingSoonPanel text={COMING_SOON_TEXT[id]} />
-          )}
+          ) : id === "table" ? (
+            <TeamPlayerStandingsCard rows={playerStandings} />
+          ) : null}
         </TabsPanel>
       ))}
     </Tabs>
-  );
-}
-
-function ComingSoonPanel({ text }: { text: string }) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
-      <svg
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="text-ink-subtle"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </svg>
-      <p className="text-sm text-ink-muted">Sắp có</p>
-      <p className="text-xs text-ink-subtle">{text}</p>
-    </div>
   );
 }

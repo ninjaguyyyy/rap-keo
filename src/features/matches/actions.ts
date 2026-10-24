@@ -2,15 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { InternalSquadSide } from "@/generated/prisma/enums";
 import { requireUser, requireAdmin } from "@/lib/session";
+import { buildBalancedInternalTeamSides } from "./internal-squad-balance";
 import {
   createMatchSchema,
+  updateInternalSquadSideSchema,
   updateMatchResultSchema,
   type CreateMatchState,
   type UpdateMatchResultState,
 } from "./schemas";
 import { parseMatchFromText, type MatchDraft } from "./ai-parser";
-import { listTeamMembers } from "@/features/teams/queries";
 // Tạo kèo mới. creator = user đăng nhập. MVP: chưa gắn team/field/location
 // (Team CRUD, Field list, Map ở task sau) -> để null, user nhập area text.
 export async function createMatch(
@@ -234,9 +236,224 @@ export async function cancelMyMatch(matchId: string): Promise<MatchActionState> 
   }
 }
 
+// Xóa hẳn trận khỏi hệ thống. Chỉ đội trưởng của team gắn với trận được xóa.
+// Dùng cho trang chi tiết trận (đặc biệt trận nội bộ/team match). Các bản ghi liên
+// quan (request, player stats, vote session, votes) tự xóa theo FK cascade.
+export async function deleteMatchByOwner(matchId: string): Promise<MatchActionState> {
+  const user = await requireUser();
+
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true, creatorId: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) {
+    return { error: "Trận này không thuộc đội nào để xóa theo quyền đội trưởng." };
+  }
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền xóa trận." };
+  }
+
+  try {
+    await db.match.delete({ where: { id: matchId } });
+    revalidatePath("/matches");
+    revalidatePath("/my-matches");
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/teams/${match.teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("deleteMatchByOwner error:", err);
+    return { error: "Không xóa được trận. Thử lại nhé." };
+  }
+}
+
+// Gỡ 1 cầu thủ khỏi đội hình trận. Chỉ đội trưởng đội chủ quản được thao tác.
+export async function removeMatchSquadMember(
+  matchId: string,
+  userId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true, matchType: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) return { error: "Trận không thuộc đội nào." };
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền chỉnh đội hình." };
+  }
+
+  try {
+    await db.matchSquadMember.deleteMany({
+      where: { matchId, userId },
+    });
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/teams/${match.teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("removeMatchSquadMember error:", err);
+    return { error: "Không cập nhật được đội hình. Thử lại nhé." };
+  }
+}
+
+// Thêm lại 1 cầu thủ vào đội hình trận. Chỉ đội trưởng đội chủ quản được thao tác.
+export async function addMatchSquadMember(
+  matchId: string,
+  userId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) return { error: "Trận không thuộc đội nào." };
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền chỉnh đội hình." };
+  }
+
+  const member = await db.teamMember.findUnique({
+    where: { teamId_userId: { teamId: match.teamId, userId } },
+    select: { userId: true },
+  });
+  if (!member) {
+    return { error: "Cầu thủ này không thuộc đội." };
+  }
+
+  try {
+    await db.matchSquadMember.createMany({
+      data: [{ matchId, userId }],
+      skipDuplicates: true,
+    });
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/teams/${match.teamId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("addMatchSquadMember error:", err);
+    return { error: "Không thêm được cầu thủ vào đội hình. Thử lại nhé." };
+  }
+}
+
+// Gán cầu thủ nội bộ vào bên A/B. Chỉ đội trưởng được đổi.
+export async function setInternalMatchSquadSide(
+  matchId: string,
+  userId: string,
+  side: "SIDE_A" | "SIDE_B",
+): Promise<MatchActionState> {
+  const user = await requireUser();
+  const parsed = updateInternalSquadSideSchema.safeParse({ matchId, userId, side });
+  if (!parsed.success) return { error: "Dữ liệu đội hình không hợp lệ." };
+
+  const match = await db.match.findUnique({
+    where: { id: parsed.data.matchId },
+    select: { id: true, teamId: true, matchType: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) return { error: "Trận không thuộc đội nào." };
+  if (match.matchType !== "INTERNAL") {
+    return { error: "Chỉ trận nội bộ mới gán bên thi đấu A/B." };
+  }
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền chỉnh đội hình nội bộ." };
+  }
+
+  try {
+    const updated = await db.matchSquadMember.updateMany({
+      where: { matchId: parsed.data.matchId, userId: parsed.data.userId },
+      data: { internalSide: parsed.data.side },
+    });
+    if (updated.count === 0) {
+      return { error: "Cầu thủ chưa có trong đội hình trận." };
+    }
+    revalidatePath(`/matches/${parsed.data.matchId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("setInternalMatchSquadSide error:", err);
+    return { error: "Không cập nhật được bên thi đấu. Thử lại nhé." };
+  }
+}
+
+// Chia lại đội hình nội bộ ngẫu nhiên cân bằng theo điểm cầu thủ hiện tại.
+export async function randomizeInternalMatchSquad(
+  matchId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true, matchType: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) return { error: "Trận không thuộc đội nào." };
+  if (match.matchType !== "INTERNAL") {
+    return { error: "Chỉ trận nội bộ mới chia đội A/B." };
+  }
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền chia đội nội bộ." };
+  }
+
+  const squad = await db.matchSquadMember.findMany({
+    where: { matchId },
+    select: { userId: true },
+  });
+  if (squad.length === 0) return { error: "Trận chưa có cầu thủ trong đội hình." };
+
+  try {
+    const sideByUserId = await buildBalancedInternalTeamSides(
+      match.teamId,
+      squad.map((member) => member.userId),
+    );
+    await db.$transaction(
+      squad.map((member) =>
+        db.matchSquadMember.updateMany({
+          where: { matchId, userId: member.userId },
+          data: {
+            internalSide: sideByUserId.get(member.userId) ?? InternalSquadSide.SIDE_A,
+          },
+        })),
+    );
+    revalidatePath(`/matches/${matchId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("randomizeInternalMatchSquad error:", err);
+    return { error: "Không chia lại đội hình được. Thử lại nhé." };
+  }
+}
+
 // Cập nhật kết quả trận (popup trên match detail). Owner HOẶC thành viên đội được
 // cập nhật. Set tỷ số + status COMPLETED (đã đá) + thay thế PlayerStat (aggregate
-// goals/assists từ danh sách bàn). Transaction để match + stats nhất quán.
+// goals/assists/saves). Transaction để match + stats nhất quán.
 export async function updateMatchResult(
   _prev: UpdateMatchResultState,
   formData: FormData,
@@ -257,18 +474,33 @@ export async function updateMatchResult(
     assistId: assistIds[i] ?? null,
   })).filter((s) => s.scorerId); // bỏ row rỗng (chưa chọn scorer).
 
+  // Đọc mảng cứu thua: mỗi dòng gồm userId + count.
+  const saveUserIds = formData.getAll("saveUserId").map(String);
+  const saveCounts = formData.getAll("saveCount").map((value) => Number(value));
+  const saveMaxLen = Math.max(saveUserIds.length, saveCounts.length);
+  const saves = Array.from({ length: saveMaxLen }, (_, i) => ({
+    userId: saveUserIds[i] ?? "",
+    count: saveCounts[i] ?? 0,
+  })).filter((save) => save.userId);
+
   const parsed = updateMatchResultSchema.safeParse({
     matchId: formData.get("matchId"),
     homeScore: Number(formData.get("homeScore")),
     awayScore: Number(formData.get("awayScore")),
     scorers,
+    saves,
   });
   if (!parsed.success) {
     const fieldErrors: NonNullable<UpdateMatchResultState["fieldErrors"]> = {};
     for (const issue of parsed.error.issues) {
       const topKey = issue.path[0];
-      if (topKey === "homeScore" || topKey === "awayScore" || topKey === "scorers") {
-        const fieldKey = topKey as "homeScore" | "awayScore" | "scorers";
+      if (
+        topKey === "homeScore"
+        || topKey === "awayScore"
+        || topKey === "scorers"
+        || topKey === "saves"
+      ) {
+        const fieldKey = topKey as "homeScore" | "awayScore" | "scorers" | "saves";
         if (!fieldErrors[fieldKey]) fieldErrors[fieldKey] = issue.message;
       }
     }
@@ -280,7 +512,7 @@ export async function updateMatchResult(
   // Load match + kiểm tra quyền (owner hoặc thành viên đội).
   const match = await db.match.findUnique({
     where: { id: matchId },
-    select: { teamId: true, status: true },
+    select: { teamId: true, status: true, matchType: true },
   });
   if (!match) return { error: "Trận không tồn tại." };
   if (!match.teamId) return { error: "Trận không thuộc đội nào." };
@@ -296,27 +528,57 @@ export async function updateMatchResult(
   const isMember = team.ownerId === user.id || team.members.length > 0;
   if (!isMember) return { error: "Bạn không có quyền cập nhật trận này." };
 
-  // Validate scorerId/assistId phải là thành viên đội hiện tại.
-  const members = await listTeamMembers(match.teamId);
-  const memberIds = new Set(members.map((m) => m.userId));
-  const memberNameById = new Map(members.map((m) => [m.userId, m.user.name ?? m.user.phone ?? "—"]));
+  // Validate scorer/assist/save phải nằm trong đội hình tham gia trận.
+  const squadMembers = await db.matchSquadMember.findMany({
+    where: {
+      matchId,
+      ...(match.matchType === "INTERNAL"
+        ? { internalSide: { in: [InternalSquadSide.SIDE_A, InternalSquadSide.SIDE_B] } }
+        : {}),
+    },
+    select: {
+      userId: true,
+      user: {
+        select: {
+          name: true,
+          phone: true,
+        },
+      },
+    },
+  });
+  const memberIds = new Set(squadMembers.map((m) => m.userId));
+  if (memberIds.size === 0) {
+    return { error: "Trận chưa có cầu thủ tham gia để cập nhật thống kê." };
+  }
+  const memberNameById = new Map(
+    squadMembers.map((m) => [m.userId, m.user.name ?? m.user.phone ?? "—"]),
+  );
   for (const s of parsed.data.scorers) {
     if (!memberIds.has(s.scorerId)) {
-      return { fieldErrors: { scorers: "Người ghi bàn không thuộc đội." } };
+      return { fieldErrors: { scorers: "Người ghi bàn không thuộc đội hình tham gia trận." } };
     }
     if (s.assistId && !memberIds.has(s.assistId)) {
-      return { fieldErrors: { scorers: "Người kiến tạo không thuộc đội." } };
+      return { fieldErrors: { scorers: "Người kiến tạo không thuộc đội hình tham gia trận." } };
+    }
+  }
+  for (const save of parsed.data.saves) {
+    if (!memberIds.has(save.userId)) {
+      return { fieldErrors: { saves: "Cầu thủ cứu thua không thuộc đội hình tham gia trận." } };
     }
   }
 
   // Aggregate PlayerStat: mỗi userId 1 row, goals = count làm scorer, assists =
-  // count làm assist.
-  const statsByUser = new Map<string, { goals: number; assists: number; displayName: string }>();
+  // count làm assist, saves = tổng số pha cứu thua nhập tay.
+  const statsByUser = new Map<
+    string,
+    { goals: number; assists: number; saves: number; displayName: string }
+  >();
   for (const s of parsed.data.scorers) {
     if (!statsByUser.has(s.scorerId)) {
       statsByUser.set(s.scorerId, {
         goals: 0,
         assists: 0,
+        saves: 0,
         displayName: memberNameById.get(s.scorerId) ?? "—",
       });
     }
@@ -326,11 +588,23 @@ export async function updateMatchResult(
         statsByUser.set(s.assistId, {
           goals: 0,
           assists: 0,
+          saves: 0,
           displayName: memberNameById.get(s.assistId) ?? "—",
         });
       }
       statsByUser.get(s.assistId)!.assists += 1;
     }
+  }
+  for (const save of parsed.data.saves) {
+    if (!statsByUser.has(save.userId)) {
+      statsByUser.set(save.userId, {
+        goals: 0,
+        assists: 0,
+        saves: 0,
+        displayName: memberNameById.get(save.userId) ?? "—",
+      });
+    }
+    statsByUser.get(save.userId)!.saves += save.count;
   }
 
   try {
@@ -352,6 +626,7 @@ export async function updateMatchResult(
             displayName: v.displayName,
             goals: v.goals,
             assists: v.assists,
+            saves: v.saves,
           })),
         });
       }

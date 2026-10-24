@@ -10,6 +10,7 @@
 - email (string, unique, nullable)        -- từ Google OAuth; dùng làm key gộp account
 - password_hash (string, nullable)        -- bcrypt; null đối với user Google
 - name (string, **nullable**)             -- cho nhập sau khi đăng nhập lần đầu (onboarding)
+- hometown (string, nullable)             -- quê quán hiển thị ở danh sách cầu thủ
 - avatar_url (string, nullable)
 - role (enum: USER, ADMIN, default USER)  -- ADMIN: quyền tạo kèo từ text (AI parse) + quản trị
 - created_at, updated_at
@@ -41,6 +42,7 @@
 - team_id (fk -> Team.id)
 - user_id (fk -> User.id)
 - role (enum: OWNER, MEMBER)
+- jersey_number (int, nullable)
 - joined_at
 - unique(team_id, user_id)
 
@@ -67,6 +69,7 @@
 - play_times (array timestamp)            -- thời gian đá (1 kèo có thể nhiều giờ trong ngày)
 - note (text, nullable)
 - status (enum: OPEN, MATCHED, CONFIRMED, COMPLETED, CANCELLED, EXPIRED)
+- squad_seeded_at (timestamp, nullable)   -- đánh dấu đã seed đội hình mặc định 1 lần
 - created_at, updated_at
 
 ### MatchRequest (Yêu cầu ghép kèo)
@@ -77,6 +80,32 @@
 - status (enum: PENDING, ACCEPTED, REJECTED, CANCELLED)
 - message (text, nullable)
 - created_at, updated_at
+
+### MatchMvpVoteSession (Phiên vote MVP theo trận)
+- id (uuid, pk)
+- match_id (fk -> Match.id, unique)      -- mỗi trận tối đa 1 phiên vote
+- token_hash (string, unique)             -- hash token share link (không lưu plaintext)
+- expires_at (timestamp)                  -- mặc định 24h từ lúc tạo/regenerate
+- closed_at (timestamp, nullable)         -- null = đang mở
+- created_by_user_id (fk -> User.id)
+- winner_user_id (fk -> User.id, nullable)
+- created_at, updated_at
+
+### MatchMvpVote (Phiếu vote MVP)
+- id (uuid, pk)
+- session_id (fk -> MatchMvpVoteSession.id)
+- voter_user_id (fk -> User.id)
+- candidate_user_id (fk -> User.id)
+- created_at, updated_at
+- unique(session_id, voter_user_id)       -- 1 user = 1 phiếu / session (upsert để đổi trước hạn)
+
+### MatchSquadMember (Đội hình theo trận)
+- id (uuid, pk)
+- match_id (fk -> Match.id)
+- user_id (fk -> User.id)
+- internal_side (enum: SIDE_A, SIDE_B, BENCH, nullable) -- chỉ dùng cho trận nội bộ
+- created_at
+- unique(match_id, user_id)               -- 1 người chỉ xuất hiện 1 lần trong đội hình trận
 
 ### Notification
 - id (uuid, pk)
@@ -90,6 +119,9 @@
 - User 1—n Team (owner). User n—n Team qua TeamMember.
 - Team 1—n Match. User 1—n Match (creator).
 - Match 1—n MatchRequest.
+- Match 1—n MatchSquadMember.
+- Match 1—1 MatchMvpVoteSession.
+- MatchMvpVoteSession 1—n MatchMvpVote.
 - Field 1—n Match.
 
 ## Index quan trọng
@@ -97,6 +129,9 @@
 - Match.skill_tiers: GIST/GIN index cho filter hasSome (task sau nếu cần).
 - Match.play_times: array — query "OPEN có giờ sắp tới" lọc trong app (MVP).
 - Field.location: GIST index.
+- MatchMvpVoteSession.match_id (unique), token_hash (unique), winner_user_id (index).
+- MatchMvpVote.unique(session_id, voter_user_id), index(session_id, candidate_user_id).
+- MatchSquadMember.unique(match_id, user_id), index(user_id).
 
 ## Logic hết hạn
 Job định kỳ chuyển Match `OPEN`/`MATCHED` có toàn bộ `play_times` đã qua sang `EXPIRED`.

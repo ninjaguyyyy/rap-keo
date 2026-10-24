@@ -77,6 +77,12 @@ enum MatchRequestStatus {
   CANCELLED
 }
 
+enum InternalSquadSide {
+  SIDE_A
+  SIDE_B
+  BENCH
+}
+
 enum NotificationType {
   MATCH_REQUEST
   REQUEST_ACCEPTED
@@ -127,6 +133,7 @@ model User {
   passwordHash String? @map("password_hash")
   // name nullable: cho user nhập sau khi đăng nhập lần đầu (onboarding).
   name      String?
+  hometown  String?
   avatarUrl String?  @map("avatar_url")
   // Vai trò: USER mặc định; ADMIN có quyền parse text tạo kèo + quản trị.
   role      UserRole @default(USER) @map("role")
@@ -149,6 +156,12 @@ model User {
   webPushSubscriptions WebPushSubscription[]
   // Vua phá lưới / kiến tạo: mỗi user có nhiều dòng PlayerStat (1 trận / 1 đội).
   playerStats     PlayerStat[]
+  // MVP vote theo trận: session user tạo + vote user gửi/được nhận.
+  createdMvpVoteSessions MatchMvpVoteSession[] @relation("MvpVoteSessionCreator")
+  wonMvpVoteSessions     MatchMvpVoteSession[] @relation("MvpVoteSessionWinner")
+  castMvpVotes           MatchMvpVote[]        @relation("MvpVoteVoter")
+  receivedMvpVotes       MatchMvpVote[]        @relation("MvpVoteCandidate")
+  matchSquadMembers      MatchSquadMember[]
   // Giải đấu user làm organizer (tạo giải).
   organizedTournaments Tournament[] @relation("TournamentOrganizer")
   // Cầu thủ của participant giải gắn với user (chọn từ TeamMember hoặc tự thêm).
@@ -208,11 +221,12 @@ model Team {
 }
 
 model TeamMember {
-  id       String   @id @default(uuid()) @db.Uuid
-  teamId   String   @map("team_id") @db.Uuid
-  userId   String   @map("user_id") @db.Uuid
-  role     TeamRole @default(MEMBER)
-  joinedAt DateTime @default(now()) @map("joined_at")
+  id           String   @id @default(uuid()) @db.Uuid
+  teamId       String   @map("team_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  role         TeamRole @default(MEMBER)
+  jerseyNumber Int?     @map("jersey_number")
+  joinedAt     DateTime @default(now()) @map("joined_at")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -268,6 +282,9 @@ model Match {
   // true = trận do team tự tạo, KHÔNG hiện trên bảng kèo công khai /matches.
   // false (mặc định) = kèo public (flow tạo kèo cũ).
   isPrivate   Boolean  @default(false)              @map("is_private")
+  // Đánh dấu đã seed đội hình mặc định từ TeamMember cho trận kèo.
+  // INTERNAL để null (flow chốt sau), tránh tự seed lại sau khi đội trưởng remove hết.
+  squadSeededAt DateTime?                           @map("squad_seeded_at")
   createdAt   DateTime                               @default(now()) @map("created_at")
   updatedAt   DateTime                               @updatedAt @map("updated_at")
 
@@ -277,6 +294,10 @@ model Match {
   requests MatchRequest[]
   // Bàn thắng / kiến tạo của từng cầu thủ trong trận (ghi khi COMPLETED).
   playerStats PlayerStat[]
+  // Phiên vote MVP của trận (1 trận tối đa 1 phiên vote).
+  mvpVoteSession MatchMvpVoteSession?
+  // Đội hình ra sân của trận (snapshot theo trận, owner có thể remove người không đá).
+  squadMembers MatchSquadMember[]
   // Trận thuộc giải đấu (nullable: trận thường / team match không thuộc giải).
   tournamentId String?                              @map("tournament_id") @db.Uuid
   tournament   Tournament?                          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -290,6 +311,24 @@ model Match {
   @@index([tournamentId])
   // lọc kèo OPEN có giờ sắp tới: query lọc trong app (array không dùng B-tree trực tiếp).
   @@map("matches")
+}
+
+// Đội hình ra sân theo trận: snapshot thành viên đội ở thời điểm seed trận kèo.
+// INTERNAL chưa dùng (flow chốt sau). Unique (matchId, userId) để tránh trùng người.
+model MatchSquadMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  matchId   String   @map("match_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  internalSide InternalSquadSide? @map("internal_side")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+  @@index([matchId, internalSide])
+  @@map("match_squad_members")
 }
 
 model MatchRequest {
@@ -367,6 +406,7 @@ model PlayerStat {
   displayName  String  @map("display_name")
   goals        Int     @default(0)
   assists      Int     @default(0)
+  saves        Int     @default(0)
 
   match             Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
   team              Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -378,6 +418,51 @@ model PlayerStat {
   @@index([participantPlayerId])
   @@index([participantId])
   @@map("player_stats")
+}
+
+// Phiên vote MVP theo trận. Link share dùng token plaintext (chỉ trả 1 lần cho UI),
+// DB chỉ lưu token_hash để tránh lộ link nếu leak DB.
+// Mỗi trận tối đa 1 session MVP (matchId unique).
+model MatchMvpVoteSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  matchId         String    @unique @map("match_id") @db.Uuid
+  tokenHash       String    @unique @map("token_hash")
+  expiresAt       DateTime  @map("expires_at")
+  closedAt        DateTime? @map("closed_at")
+  createdByUserId String    @map("created_by_user_id") @db.Uuid
+  winnerUserId    String?   @map("winner_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  match         Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdByUser User   @relation("MvpVoteSessionCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  winnerUser    User?  @relation("MvpVoteSessionWinner", fields: [winnerUserId], references: [id], onDelete: SetNull)
+  votes         MatchMvpVote[]
+
+  @@index([expiresAt])
+  @@index([closedAt])
+  @@index([winnerUserId])
+  @@map("match_mvp_vote_sessions")
+}
+
+// Phiếu vote MVP: 1 voter chỉ có 1 phiếu trong 1 session (upsert để đổi lựa chọn
+// trước hạn).
+model MatchMvpVote {
+  id              String   @id @default(uuid()) @db.Uuid
+  sessionId       String   @map("session_id") @db.Uuid
+  voterUserId     String   @map("voter_user_id") @db.Uuid
+  candidateUserId String   @map("candidate_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  session       MatchMvpVoteSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  voterUser     User                @relation("MvpVoteVoter", fields: [voterUserId], references: [id], onDelete: Cascade)
+  candidateUser User                @relation("MvpVoteCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, voterUserId])
+  @@index([sessionId, candidateUserId])
+  @@index([candidateUserId])
+  @@map("match_mvp_votes")
 }
 
 // Giải đấu. Organizer (User) tạo -> ADMIN duyệt -> public trên /tournaments.

@@ -21,11 +21,11 @@ export function TeamCard({
 }) {
   return (
     <Card className="gap-0 p-0">
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-start gap-3 p-4">
         {/* Vùng avatar + tên/khu vực link sang chi tiết. */}
         <Link
           href={`/teams/${team.id}`}
-          className="flex min-w-0 flex-1 items-center gap-3"
+        className="flex min-w-0 flex-1 items-start gap-3"
         >
           <TeamAvatar name={team.name} imageUrl={team.logoUrl} size="sm" />
           <div className="min-w-0 flex-1">

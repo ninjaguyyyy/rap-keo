@@ -1,8 +1,8 @@
 "use client";
 
 // Dialog cập nhật kết quả trận (popup trên match detail). Owner + thành viên đội
-// được cập nhật. Nhập tỷ số 2 bên + danh sách bàn (mỗi bàn: scorer + kiến tạo,
-// chọn từ thành viên đội). Lưu -> set status COMPLETED + ghi PlayerStat.
+// được cập nhật. Nhập tỷ số 2 bên + danh sách bàn (mỗi bàn: scorer + kiến tạo)
+// và cứu thua (cầu thủ + số pha). Lưu -> set status COMPLETED + ghi PlayerStat.
 // Mirror EditTeamDialog (Dialog render prop) + useActionState.
 import { useActionState, useEffect, useState } from "react";
 import {
@@ -31,12 +31,22 @@ import type { TeamMemberItem } from "@/features/teams/queries";
 const initialState: UpdateMatchResultState = {};
 
 type ScorerRow = { scorerId: string; assistId: string };
+type SaveRow = { userId: string; count: string };
 
 // Reconstruct scorer rows từ playerStats hiện tại (prefill edit mode):
 // Không prefill scorer — logic reconstruct cặp scorer-assist không chính xác từ
 // aggregate (DB chỉ lưu goals/assists count, không lưu cặp). User nhập lại khi sửa.
 function initialScorers(): ScorerRow[] {
   return [];
+}
+
+function initialSaves(match: MatchDetail): SaveRow[] {
+  return match.playerStats
+    .filter((stat) => (stat.saves ?? 0) > 0 && stat.userId)
+    .map((stat) => ({
+      userId: stat.userId ?? "",
+      count: String(stat.saves),
+    }));
 }
 
 export function UpdateMatchResultDialog({
@@ -58,6 +68,7 @@ export function UpdateMatchResultDialog({
     match.awayScore?.toString() ?? "0",
   );
   const [scorers, setScorers] = useState<ScorerRow[]>(() => initialScorers());
+  const [saves, setSaves] = useState<SaveRow[]>(() => initialSaves(match));
   const memberLabelById = new Map(
     members.map((m) => [m.userId, m.user.name ?? m.user.phone ?? "—"]),
   );
@@ -79,6 +90,17 @@ export function UpdateMatchResultDialog({
   }
   function setScorerField(idx: number, field: "scorerId" | "assistId", value: string) {
     setScorers((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+    );
+  }
+  function addSave() {
+    setSaves((prev) => [...prev, { userId: "", count: "1" }]);
+  }
+  function removeSave(idx: number) {
+    setSaves((prev) => prev.filter((_, i) => i !== idx));
+  }
+  function setSaveField(idx: number, field: "userId" | "count", value: string) {
+    setSaves((prev) =>
       prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
     );
   }
@@ -106,7 +128,7 @@ export function UpdateMatchResultDialog({
         <DialogHeader>
           <DialogTitle>Cập nhật kết quả trận</DialogTitle>
           <DialogDescription>
-            Nhập tỷ số và danh sách bàn thắng. Lưu sẽ đánh dấu trận đã đá.
+            Nhập tỷ số, bàn thắng và cứu thua. Lưu sẽ đánh dấu trận đã đá.
           </DialogDescription>
         </DialogHeader>
 
@@ -171,7 +193,7 @@ export function UpdateMatchResultDialog({
 
             {members.length === 0 ? (
               <p className="text-xs text-ink-subtle">
-                Đội chưa có thành viên để chọn người ghi bàn.
+                Chưa có cầu thủ tham gia trận để chọn người ghi bàn.
               </p>
             ) : null}
 
@@ -244,6 +266,92 @@ export function UpdateMatchResultDialog({
             </ul>
             {state.fieldErrors?.scorers ? (
               <p className="text-sm text-destructive">{state.fieldErrors.scorers}</p>
+            ) : null}
+          </div>
+
+          {/* Danh sách cứu thua (cầu thủ + số pha). */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label>Cứu thua đội nhà</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSave}
+                disabled={members.length === 0}
+              >
+                + Thêm cứu thua
+              </Button>
+            </div>
+
+            {members.length === 0 ? (
+              <p className="text-xs text-ink-subtle">
+                Chưa có cầu thủ tham gia trận để chọn cầu thủ cứu thua.
+              </p>
+            ) : null}
+
+            {saves.length === 0 && members.length > 0 ? (
+              <p className="text-xs text-ink-subtle">
+                Bấm “Thêm cứu thua” để nhập cầu thủ và số pha.
+              </p>
+            ) : null}
+
+            <ul className="flex flex-col gap-2">
+              {saves.map((row, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <input type="hidden" name="saveUserId" value={row.userId} />
+                  <input type="hidden" name="saveCount" value={row.count} />
+
+                  <div className="flex flex-1 flex-col gap-1">
+                    <Select
+                      value={row.userId}
+                      onValueChange={(value) => setSaveField(idx, "userId", String(value))}
+                    >
+                      <SelectTrigger className="h-10 w-full" aria-label="Cầu thủ cứu thua">
+                        <SelectValue placeholder="Cầu thủ">
+                          {memberLabelById.get(row.userId) ?? ""}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            {member.user.name ?? member.user.phone ?? "—"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    inputMode="numeric"
+                    value={row.count}
+                    onChange={(event) => setSaveField(idx, "count", event.target.value)}
+                    className="h-10 w-20 text-center font-semibold tabular-nums"
+                    aria-label="Số pha cứu thua"
+                  />
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 text-ink-subtle hover:text-destructive"
+                    onClick={() => removeSave(idx)}
+                    aria-label="Xóa cứu thua"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+
+            {state.fieldErrors?.saves ? (
+              <p className="text-sm text-destructive">{state.fieldErrors.saves}</p>
             ) : null}
           </div>
 

@@ -1,13 +1,13 @@
 "use client";
 
 // Card "Đội hình" — list thành viên của đội. Owner có nút thêm thành viên
-// (AddMemberDialog) ở header và nút xóa (RemoveMemberButton) cho mỗi MEMBER.
+// (AddMemberDialog), sửa cầu thủ (EditMemberDialog), và xóa MEMBER.
 // Owner luôn hiện đầu list (query sort role desc) và không có nút xóa.
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { TeamMemberItem } from "../queries";
 import { TeamAvatar } from "./team-avatar";
 import { AddMemberDialog } from "./add-member-dialog";
+import { EditMemberDialog } from "./edit-member-dialog";
 import { RemoveMemberButton } from "./remove-member-button";
 
 export function MemberList({
@@ -32,35 +32,47 @@ export function MemberList({
         {members.map((m) => {
           const name = m.user.name ?? m.user.phone ?? "—";
           const isOwner = m.role === "OWNER";
-          const isGuest = m.user.isGuest;
+          const jerseyText = m.jerseyNumber != null ? String(m.jerseyNumber) : "—";
+          const hometownText = m.user.hometown?.trim() ?? "";
           return (
-            <li key={m.id} className="flex items-center gap-3 px-4 py-3">
-              <TeamAvatar name={name} size="sm" />
+            <li key={m.id} className="flex items-start gap-3 px-4 py-3">
+              <TeamAvatar
+                name={name}
+                imageUrl={m.user.avatarUrl}
+                size="lg"
+                className="h-14 w-14 rounded-2xl text-xl"
+              />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {name}
+                <p className="truncate text-xl font-bold text-ink">{name}</p>
+                <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm font-medium text-ink-muted">
+                  <span className="shrink-0">{jerseyText}</span>
+                  {hometownText ? (
+                    <>
+                      <span aria-hidden="true" className="shrink-0">•</span>
+                      <span aria-label="Cờ Việt Nam" className="shrink-0">🇻🇳</span>
+                      <span className="min-w-0 truncate">{hometownText}</span>
+                    </>
+                  ) : null}
                 </p>
-                {/* Guest không có SĐT; user thật hiện SĐT. */}
-                {m.user.phone ? (
-                  <p className="truncate text-xs text-ink-subtle">
-                    {m.user.phone}
-                  </p>
-                ) : null}
               </div>
-              {/* Badge vai trò: owner > guest > member thật. */}
-              {isOwner ? (
-                <Badge variant="secondary">Đội trưởng</Badge>
-              ) : isGuest ? (
-                <Badge variant="outline">Khách</Badge>
-              ) : (
-                <Badge variant="outline">Thành viên</Badge>
-              )}
-              {canManage && !isOwner ? (
-                <RemoveMemberButton
-                  teamId={teamId}
-                  userId={m.userId}
-                  memberName={name}
-                />
+              {canManage ? (
+                <div className="flex shrink-0 items-center gap-1 pt-0.5">
+                  <EditMemberDialog
+                    teamId={teamId}
+                    userId={m.userId}
+                    currentName={m.user.name}
+                    currentHometown={m.user.hometown}
+                    displayName={name}
+                    jerseyNumber={m.jerseyNumber}
+                  />
+                  {!isOwner ? (
+                    <RemoveMemberButton
+                      teamId={teamId}
+                      userId={m.userId}
+                      memberName={name}
+                    />
+                  ) : null}
+                </div>
               ) : null}
             </li>
           );

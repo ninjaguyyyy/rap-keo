@@ -233,7 +233,6 @@ export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
                 type="date"
                 required
                 value={playDate}
-                min={todayStr()}
                 onChange={(e) => setPlayDate(e.target.value)}
                 className="h-11 text-base"
               />

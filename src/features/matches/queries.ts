@@ -1,7 +1,9 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { buildBalancedInternalTeamSides } from "./internal-squad-balance";
 import {
   FieldType,
+  InternalSquadSide,
   MatchSkillTier,
   MatchType,
 } from "@/generated/prisma/enums";
@@ -141,6 +143,19 @@ export async function listMatches(filters: MatchFilters = {}) {
 
 export type MatchListItem = Awaited<ReturnType<typeof listMatches>>[number];
 
+const matchDetailInclude = {
+  team: { select: { id: true, name: true, coverUrl: true } },
+  field: { select: { id: true, name: true, address: true } },
+  creator: { select: { id: true, name: true } },
+  requests: {
+    where: { status: "ACCEPTED" },
+    select: { requesterTeam: { select: { id: true, name: true } } },
+    take: 1,
+  },
+  // Thống kê đã ghi (goals/assists/saves) — để hiển thị + prefill popup cập nhật.
+  playerStats: { select: { userId: true, goals: true, assists: true, saves: true } },
+} as const;
+
 // Lấy 1 trận cho trang chi tiết /matches/[id]. include team (name + coverUrl cho
 // hero), field, creator, request ACCEPTED (đối thủ ghép). Trả null nếu không tồn
 // tại hoặc viewer không có quyền xem (private = chỉ owner/thành viên đội).
@@ -149,18 +164,7 @@ export type MatchListItem = Awaited<ReturnType<typeof listMatches>>[number];
 export async function getMatchById(id: string, viewerUserId?: string) {
   const match = await db.match.findUnique({
     where: { id },
-    include: {
-      team: { select: { id: true, name: true, coverUrl: true } },
-      field: { select: { id: true, name: true, address: true } },
-      creator: { select: { id: true, name: true } },
-      requests: {
-        where: { status: "ACCEPTED" },
-        select: { requesterTeam: { select: { id: true, name: true } } },
-        take: 1,
-      },
-      // Bàn đã ghi (per-player goals/assists) — để hiển thị + prefill popup cập nhật.
-      playerStats: { select: { userId: true, goals: true, assists: true } },
-    },
+    include: matchDetailInclude,
   });
   if (!match) return null;
   // Public match: xem được.
@@ -181,6 +185,15 @@ export async function getMatchById(id: string, viewerUserId?: string) {
   return null;
 }
 
+// Lấy trận theo id, bỏ qua guard private/public. Dùng cho tab MVP (share link có
+// query ?tab=mvp) để người nhận link vẫn mở được trang vote.
+export async function getMatchByIdForVoteLink(id: string) {
+  return db.match.findUnique({
+    where: { id },
+    include: matchDetailInclude,
+  });
+}
+
 export type MatchDetail = NonNullable<Awaited<ReturnType<typeof getMatchById>>>;
 
 // Viewer có quyền cập nhật kết quả trận không? Owner hoặc thành viên đội.
@@ -196,6 +209,115 @@ export async function canEditMatch(match: MatchDetail, viewerUserId?: string): P
   });
   if (!team) return false;
   return team.ownerId === viewerUserId || team.members.length > 0;
+}
+
+// Seed đội hình mặc định từ TeamMember. Chỉ seed 1 lần bằng cờ squadSeededAt để
+// tránh tự thêm lại sau khi đội trưởng chỉnh tay.
+export async function ensureMatchSquadSeeded(matchId: string) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true, matchType: true, squadSeededAt: true },
+  });
+  if (!match || !match.teamId) return;
+  if (match.squadSeededAt) return;
+
+  const teamMembers = await db.teamMember.findMany({
+    where: { teamId: match.teamId },
+    select: { userId: true },
+  });
+
+  await db.$transaction(async (tx) => {
+    const markSeeded = await tx.match.updateMany({
+      where: { id: match.id, squadSeededAt: null },
+      data: { squadSeededAt: new Date() },
+    });
+    if (markSeeded.count === 0 || teamMembers.length === 0) return;
+
+    await tx.matchSquadMember.createMany({
+      data: teamMembers.map((member) => ({
+        matchId: match.id,
+        userId: member.userId,
+        internalSide: null,
+      })),
+      skipDuplicates: true,
+    });
+  });
+}
+
+// Chuẩn hoá đội hình nội bộ về đúng 2 bên A/B (không dùng cột dự bị nữa).
+// Nếu còn dữ liệu cũ (BENCH/null) thì tự chia lại cân bằng theo points hiện tại.
+export async function ensureInternalMatchSidesBalanced(matchId: string) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, teamId: true, matchType: true },
+  });
+  if (!match || !match.teamId || match.matchType !== MatchType.INTERNAL) return;
+
+  const squad = await db.matchSquadMember.findMany({
+    where: { matchId: match.id },
+    select: { userId: true, internalSide: true },
+  });
+  if (squad.length === 0) return;
+
+  const hasLegacySide = squad.some(
+    (member) =>
+      member.internalSide !== InternalSquadSide.SIDE_A
+      && member.internalSide !== InternalSquadSide.SIDE_B,
+  );
+  if (!hasLegacySide) return;
+
+  const sideByUserId = await buildBalancedInternalTeamSides(
+    match.teamId,
+    squad.map((member) => member.userId),
+  );
+  await db.$transaction(
+    squad.map((member) =>
+      db.matchSquadMember.updateMany({
+        where: { matchId: match.id, userId: member.userId },
+        data: { internalSide: sideByUserId.get(member.userId) ?? InternalSquadSide.SIDE_A },
+      })),
+  );
+}
+
+export async function listMatchSquadMemberUserIds(matchId: string) {
+  const squad = await db.matchSquadMember.findMany({
+    where: { matchId },
+    select: { userId: true },
+  });
+  return squad.map((member) => member.userId);
+}
+
+export type MatchSquadMemberItem = {
+  userId: string;
+  name: string;
+  isGuest: boolean;
+  internalSide: InternalSquadSide | null;
+};
+
+export async function listMatchSquadMembers(
+  matchId: string,
+): Promise<MatchSquadMemberItem[]> {
+  const squad = await db.matchSquadMember.findMany({
+    where: { matchId },
+    select: {
+      userId: true,
+      internalSide: true,
+      user: {
+        select: {
+          name: true,
+          phone: true,
+          isGuest: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return squad.map((member) => ({
+    userId: member.userId,
+    name: member.user.name ?? member.user.phone ?? "—",
+    isGuest: member.user.isGuest,
+    internalSide: member.internalSide,
+  }));
 }
 
 /**
