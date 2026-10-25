@@ -208,33 +208,63 @@ export async function getTeamLeaderboard(
 }
 
 // Bảng xếp hạng cầu thủ all-time của đội. Công thức điểm:
-// - Goal: +2
-// - Assist: +1
-// - Save: +1
-// - MVP: +3 (đếm số phiên vote MVP đã đóng có winnerUserId = user)
-// matches = số trận có dòng PlayerStat (trận có đóng góp stats).
+// - Trận nội bộ (INTERNAL):
+//   - Thắng: +3
+//   - Không thắng (thua/hòa): +1
+//   - MVP: +2
+// - Trận không nội bộ:
+//   - Goal: +2
+//   - Assist: +1
+//   - Save: +1
+//   - MVP: +3
+// Lưu ý: trận không nội bộ KHÔNG có điểm tham gia.
 export async function getTeamPlayerStandings(
   teamId: string,
 ): Promise<TeamPlayerStandingRow[]> {
-  const [members, stats, mvpWins] = await Promise.all([
+  const [members, externalStats, mvpWinSessions, internalParticipations] = await Promise.all([
     listTeamMembers(teamId),
     db.playerStat.groupBy({
       by: ["userId"],
       where: {
         teamId,
         userId: { not: null },
+        match: { matchType: { not: "INTERNAL" } },
       },
       _sum: { goals: true, assists: true, saves: true },
       _count: { _all: true },
     }),
-    db.matchMvpVoteSession.groupBy({
-      by: ["winnerUserId"],
+    db.matchMvpVoteSession.findMany({
       where: {
         closedAt: { not: null },
         winnerUserId: { not: null },
         match: { teamId },
       },
-      _count: { _all: true },
+      select: {
+        winnerUserId: true,
+        match: { select: { matchType: true } },
+      },
+    }),
+    db.matchSquadMember.findMany({
+      where: {
+        internalSide: { not: null },
+        match: {
+          teamId,
+          matchType: "INTERNAL",
+          status: "COMPLETED",
+          homeScore: { not: null },
+          awayScore: { not: null },
+        },
+      },
+      select: {
+        userId: true,
+        internalSide: true,
+        match: {
+          select: {
+            homeScore: true,
+            awayScore: true,
+          },
+        },
+      },
     }),
   ]);
 
@@ -245,7 +275,7 @@ export async function getTeamPlayerStandings(
     string,
     { goals: number; assists: number; saves: number; matches: number }
   >(
-    stats
+    externalStats
       .filter((stat) => stat.userId != null)
       .map((stat) => [
         stat.userId as string,
@@ -257,21 +287,52 @@ export async function getTeamPlayerStandings(
         },
       ]),
   );
-  const mvpAwardsByUserId = new Map(
-    mvpWins
-      .filter((session) => session.winnerUserId != null)
-      .map((session) => [session.winnerUserId as string, session._count._all]),
-  );
+  const internalResultByUserId = new Map<string, { matches: number; points: number }>();
+  for (const participation of internalParticipations) {
+    const { homeScore, awayScore } = participation.match;
+    if (homeScore == null || awayScore == null) continue;
+    const current = internalResultByUserId.get(participation.userId) ?? { matches: 0, points: 0 };
+
+    let points = 1;
+    if (homeScore > awayScore && participation.internalSide === "SIDE_A") {
+      points = 3;
+    } else if (awayScore > homeScore && participation.internalSide === "SIDE_B") {
+      points = 3;
+    }
+
+    internalResultByUserId.set(participation.userId, {
+      matches: current.matches + 1,
+      points: current.points + points,
+    });
+  }
+
+  const mvpAwardsByUserId = new Map<string, number>();
+  const mvpPointsByUserId = new Map<string, number>();
+  for (const session of mvpWinSessions) {
+    if (!session.winnerUserId) continue;
+    const awards = mvpAwardsByUserId.get(session.winnerUserId) ?? 0;
+    mvpAwardsByUserId.set(session.winnerUserId, awards + 1);
+
+    const currentPoints = mvpPointsByUserId.get(session.winnerUserId) ?? 0;
+    const nextPoints = currentPoints + (session.match.matchType === "INTERNAL" ? 2 : 3);
+    mvpPointsByUserId.set(session.winnerUserId, nextPoints);
+  }
 
   const rows = members
     .map((member) => {
-      const memberStats = statsByUserId.get(member.userId);
-      const goals = memberStats?.goals ?? 0;
-      const assists = memberStats?.assists ?? 0;
-      const saves = memberStats?.saves ?? 0;
+      const externalStat = statsByUserId.get(member.userId);
+      const internalResult = internalResultByUserId.get(member.userId);
+      const goals = externalStat?.goals ?? 0;
+      const assists = externalStat?.assists ?? 0;
+      const saves = externalStat?.saves ?? 0;
       const mvpAwards = mvpAwardsByUserId.get(member.userId) ?? 0;
-      const matches = memberStats?.matches ?? 0;
-      const points = goals * 2 + assists + saves + mvpAwards * 3;
+      const externalMatches = externalStat?.matches ?? 0;
+      const internalMatches = internalResult?.matches ?? 0;
+      const matches = externalMatches + internalMatches;
+      const externalPerformancePoints = goals * 2 + assists + saves;
+      const internalParticipationPoints = internalResult?.points ?? 0;
+      const mvpPoints = mvpPointsByUserId.get(member.userId) ?? 0;
+      const points = externalPerformancePoints + internalParticipationPoints + mvpPoints;
       const pointsPerMatch = matches > 0 ? points / matches : 0;
 
       return {

@@ -42,6 +42,10 @@ function hashVoteToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function hashDeviceVoteId(deviceVoteId: string): string {
+  return createHash("sha256").update(deviceVoteId).digest("hex");
+}
+
 function generateVoteToken(): string {
   return randomBytes(32).toString("base64url");
 }
@@ -523,6 +527,7 @@ export async function submitVote(params: {
   token: string | null;
   voterUserId: string | null;
   authenticatedUserId: string | null;
+  deviceVoteId: string | null;
   candidateUserId: string;
 }) {
   const session =
@@ -560,23 +565,78 @@ export async function submitVote(params: {
   if (!eligibleUserIds.has(params.candidateUserId)) {
     throw new Error("CANDIDATE_NOT_MEMBER");
   }
+  const normalizedDeviceVoteId = params.deviceVoteId?.trim() ?? "";
+  if (!normalizedDeviceVoteId) {
+    throw new Error("DEVICE_ID_REQUIRED");
+  }
+  const deviceHash = hashDeviceVoteId(normalizedDeviceVoteId);
 
-  await db.matchMvpVote.upsert({
-    where: {
-      sessionId_voterUserId: {
-        sessionId: session.id,
-        voterUserId: effectiveVoterUserId,
-      },
-    },
-    update: {
-      candidateUserId: params.candidateUserId,
-    },
-    create: {
-      sessionId: session.id,
-      voterUserId: effectiveVoterUserId,
-      candidateUserId: params.candidateUserId,
-    },
-  });
+  try {
+    await db.$transaction(async (tx) => {
+      const [existingVoteByVoter, existingVoteByDevice] = await Promise.all([
+        tx.matchMvpVote.findUnique({
+          where: {
+            sessionId_voterUserId: {
+              sessionId: session.id,
+              voterUserId: effectiveVoterUserId,
+            },
+          },
+          select: { id: true },
+        }),
+        tx.matchMvpDeviceVote.findUnique({
+          where: {
+            sessionId_deviceHash: {
+              sessionId: session.id,
+              deviceHash,
+            },
+          },
+          select: { id: true },
+        }),
+      ]);
+
+      if (existingVoteByVoter) {
+        throw new Error("VOTER_ALREADY_VOTED");
+      }
+      if (existingVoteByDevice) {
+        throw new Error("DEVICE_ALREADY_VOTED");
+      }
+
+      await tx.matchMvpVote.create({
+        data: {
+          sessionId: session.id,
+          voterUserId: effectiveVoterUserId,
+          candidateUserId: params.candidateUserId,
+        },
+      });
+      await tx.matchMvpDeviceVote.create({
+        data: {
+          sessionId: session.id,
+          deviceHash,
+          voterUserId: effectiveVoterUserId,
+        },
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2002"
+    ) {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.join(",")
+        : String(error.meta?.target ?? "");
+      if (target.includes("session_id_voter_user_id")) {
+        throw new Error("VOTER_ALREADY_VOTED");
+      }
+      if (target.includes("session_id_device_hash")) {
+        throw new Error("DEVICE_ALREADY_VOTED");
+      }
+      throw new Error("DEVICE_ALREADY_VOTED");
+    }
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw error;
+  }
 
   return { sessionId: session.id };
 }

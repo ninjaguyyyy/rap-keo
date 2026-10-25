@@ -160,6 +160,7 @@ model User {
   createdMvpVoteSessions MatchMvpVoteSession[] @relation("MvpVoteSessionCreator")
   wonMvpVoteSessions     MatchMvpVoteSession[] @relation("MvpVoteSessionWinner")
   castMvpVotes           MatchMvpVote[]        @relation("MvpVoteVoter")
+  castMvpDeviceVotes     MatchMvpDeviceVote[]  @relation("MvpDeviceVoteVoter")
   receivedMvpVotes       MatchMvpVote[]        @relation("MvpVoteCandidate")
   matchSquadMembers      MatchSquadMember[]
   // Giải đấu user làm organizer (tạo giải).
@@ -438,6 +439,7 @@ model MatchMvpVoteSession {
   createdByUser User   @relation("MvpVoteSessionCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   winnerUser    User?  @relation("MvpVoteSessionWinner", fields: [winnerUserId], references: [id], onDelete: SetNull)
   votes         MatchMvpVote[]
+  deviceVotes   MatchMvpDeviceVote[]
 
   @@index([expiresAt])
   @@index([closedAt])
@@ -445,8 +447,7 @@ model MatchMvpVoteSession {
   @@map("match_mvp_vote_sessions")
 }
 
-// Phiếu vote MVP: 1 voter chỉ có 1 phiếu trong 1 session (upsert để đổi lựa chọn
-// trước hạn).
+// Phiếu vote MVP: 1 voter chỉ có 1 phiếu trong 1 session.
 model MatchMvpVote {
   id              String   @id @default(uuid()) @db.Uuid
   sessionId       String   @map("session_id") @db.Uuid
@@ -463,6 +464,24 @@ model MatchMvpVote {
   @@index([sessionId, candidateUserId])
   @@index([candidateUserId])
   @@map("match_mvp_votes")
+}
+
+// Khóa vote theo thiết bị cho mỗi session MVP.
+// Mỗi thiết bị (hash từ cookie định danh thiết bị) chỉ được ghi 1 phiếu/session.
+model MatchMvpDeviceVote {
+  id         String   @id @default(uuid()) @db.Uuid
+  sessionId  String   @map("session_id") @db.Uuid
+  deviceHash String   @map("device_hash")
+  voterUserId String  @map("voter_user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session   MatchMvpVoteSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  voterUser User                @relation("MvpDeviceVoteVoter", fields: [voterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, deviceHash])
+  @@index([sessionId])
+  @@index([voterUserId])
+  @@map("match_mvp_device_votes")
 }
 
 // Giải đấu. Organizer (User) tạo -> ADMIN duyệt -> public trên /tournaments.

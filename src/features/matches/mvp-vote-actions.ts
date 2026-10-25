@@ -1,6 +1,8 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser, requireUser } from "@/lib/session";
 import {
@@ -13,6 +15,27 @@ import {
   closeMvpVoteSession,
   submitVote,
 } from "./mvp-vote";
+
+const MVP_DEVICE_COOKIE_NAME = "rk_mvp_device_vote_id";
+const MVP_DEVICE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 2;
+
+async function getOrCreateDeviceVoteId(): Promise<string> {
+  const cookieStore = await cookies();
+  const existing = cookieStore.get(MVP_DEVICE_COOKIE_NAME)?.value?.trim() ?? "";
+  if (existing.length > 0) {
+    return existing;
+  }
+
+  const generated = randomBytes(32).toString("base64url");
+  cookieStore.set(MVP_DEVICE_COOKIE_NAME, generated, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: MVP_DEVICE_COOKIE_MAX_AGE_SECONDS,
+  });
+  return generated;
+}
 
 function mapVoteError(error: unknown): string {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -44,6 +67,12 @@ function mapVoteError(error: unknown): string {
       return "Bạn cần chọn tên của mình trong danh sách cầu thủ tham gia trận.";
     case "VOTER_NOT_MEMBER":
       return "Người vote không nằm trong danh sách cầu thủ tham gia trận.";
+    case "VOTER_ALREADY_VOTED":
+      return "Cầu thủ này đã gửi phiếu cho trận này rồi.";
+    case "DEVICE_ID_REQUIRED":
+      return "Không định danh được thiết bị. Bạn tải lại trang rồi thử lại.";
+    case "DEVICE_ALREADY_VOTED":
+      return "Thiết bị này đã gửi phiếu cho trận này rồi.";
     case "MATCH_SQUAD_EMPTY":
       return "Trận này chưa có danh sách cầu thủ tham gia để mở vote MVP.";
     case "MATCH_NOT_FOUND":
@@ -86,11 +115,13 @@ export async function submitMvpVote(
   }
 
   try {
+    const deviceVoteId = await getOrCreateDeviceVoteId();
     await submitVote({
       ...parsed.data,
       token: parsed.data.token ?? null,
       voterUserId: parsed.data.voterUserId ?? null,
       authenticatedUserId: viewer?.id ?? null,
+      deviceVoteId,
     });
     revalidatePath(`/matches/${parsed.data.matchId}/mvp-vote`);
     revalidatePath(`/matches/${parsed.data.matchId}`);

@@ -90,7 +90,10 @@ export function TeamPlayerStandingsCard({
           <div className="border-t border-line px-4 py-2 text-xs text-ink-subtle">
             <p className="font-semibold text-ink-muted">📌 Công thức tính điểm</p>
             <p className="mt-1">
-              ⚽ Bàn × 2 · 🎯 Kiến tạo × 1 · 🧤 Save × 1 · 👑 MVP × 3
+              🏟️ Nội bộ: 🥇 Thắng +3 · 😮‍💨 Không thắng +1 · 👑 MVP +2
+            </p>
+            <p className="mt-1">
+              ⚔️ Đá kèo: ⚽ Bàn ×2 · 🎯 Kiến tạo ×1 · 🧤 Save ×1 · 👑 MVP ×3 (không có điểm tham gia)
             </p>
           </div>
         </>

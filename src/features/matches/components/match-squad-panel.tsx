@@ -373,6 +373,7 @@ function LineupPreviewCard({
   const [topEmptyStarterSlots, setTopEmptyStarterSlots] = useState<number[]>([]);
   const [bottomEmptyStarterSlots, setBottomEmptyStarterSlots] = useState<number[]>([]);
   const [draggingSlot, setDraggingSlot] = useState<DraggingLineupSlot | null>(null);
+  const [tapSelectedSlot, setTapSelectedSlot] = useState<DraggingLineupSlot | null>(null);
   const [optimisticTopOrderedPlayers, setOptimisticTopOrderedPlayers] = useState<LineupPlayer[] | null>(null);
   const [optimisticBottomOrderedPlayers, setOptimisticBottomOrderedPlayers] = useState<LineupPlayer[] | null>(null);
 
@@ -509,14 +510,15 @@ function LineupPreviewCard({
     );
   }
 
-  function handleDropOnSlot(
+  function applyDropFromSlot(
+    sourceSlot: DraggingLineupSlot,
     side: LineupSide,
     targetIndex: number,
     targetStarterSlotIndex?: number,
     isTargetEmptyStarter?: boolean,
   ) {
-    if (!canDrag || !draggingSlot) return;
-    if (draggingSlot.side === side) {
+    if (!canDrag) return;
+    if (sourceSlot.side === side) {
       setOptimisticTopOrderedPlayers(null);
       setOptimisticBottomOrderedPlayers(null);
       const sidePlayers = side === "top" ? topOrderedPlayers : bottomOrderedPlayers;
@@ -527,13 +529,13 @@ function LineupPreviewCard({
         : normalizedBottomEmptyStarterSlots;
 
       if (isDropToBenchEnd || (isTargetEmptyStarter && targetStarterSlotIndex != null)) {
-        const reordered = moveLineupPlayer(sidePlayers, draggingSlot.index, targetIndex);
+        const reordered = moveLineupPlayer(sidePlayers, sourceSlot.index, targetIndex);
         const nextEmptySlots = new Set(sourceEmptySlots);
         if (isTargetEmptyStarter && targetStarterSlotIndex != null) {
           nextEmptySlots.delete(targetStarterSlotIndex);
         }
-        if (draggingSlot.starterSlotIndex != null && draggingSlot.starterSlotIndex < sideStarterSlotCount) {
-          nextEmptySlots.add(draggingSlot.starterSlotIndex);
+        if (sourceSlot.starterSlotIndex != null && sourceSlot.starterSlotIndex < sideStarterSlotCount) {
+          nextEmptySlots.add(sourceSlot.starterSlotIndex);
         }
         const normalizedNextEmptySlots = normalizeStarterSlotIndexes(
           [...nextEmptySlots],
@@ -552,41 +554,39 @@ function LineupPreviewCard({
             lineupOrderFromPlayers(reordered),
           );
         }
-        setDraggingSlot(null);
         return;
       }
 
       if (side === "top") {
-        const reordered = swapLineupPlayers(topOrderedPlayers, draggingSlot.index, targetIndex);
+        const reordered = swapLineupPlayers(topOrderedPlayers, sourceSlot.index, targetIndex);
         persistOrders(
           lineupOrderFromPlayers(reordered),
           lineupOrderFromPlayers(bottomOrderedPlayers),
         );
       } else {
-        const reordered = swapLineupPlayers(bottomOrderedPlayers, draggingSlot.index, targetIndex);
+        const reordered = swapLineupPlayers(bottomOrderedPlayers, sourceSlot.index, targetIndex);
         persistOrders(
           lineupOrderFromPlayers(topOrderedPlayers),
           lineupOrderFromPlayers(reordered),
         );
       }
-      setDraggingSlot(null);
       return;
     }
 
     if (!hasBottom || !onMoveAcrossSides) return;
-    const sourcePlayers = draggingSlot.side === "top" ? topOrderedPlayers : bottomOrderedPlayers;
+    const sourcePlayers = sourceSlot.side === "top" ? topOrderedPlayers : bottomOrderedPlayers;
     const targetPlayers = side === "top" ? topOrderedPlayers : bottomOrderedPlayers;
-    const movedPlayer = sourcePlayers[draggingSlot.index];
+    const movedPlayer = sourcePlayers[sourceSlot.index];
     if (!movedPlayer) return;
     const targetPlayer = targetPlayers[targetIndex];
 
-    const sourceWithoutPlayer = sourcePlayers.filter((_, index) => index !== draggingSlot.index);
+    const sourceWithoutPlayer = sourcePlayers.filter((_, index) => index !== sourceSlot.index);
     const nextTargetPlayers = [...targetPlayers];
     if (targetPlayer) {
       const nextSourcePlayers = [...sourcePlayers];
-      nextSourcePlayers[draggingSlot.index] = targetPlayer;
+      nextSourcePlayers[sourceSlot.index] = targetPlayer;
       nextTargetPlayers[targetIndex] = movedPlayer;
-      if (draggingSlot.side === "top") {
+      if (sourceSlot.side === "top") {
         setOptimisticTopOrderedPlayers(nextSourcePlayers);
         setOptimisticBottomOrderedPlayers(nextTargetPlayers);
         persistOrders(
@@ -609,7 +609,7 @@ function LineupPreviewCard({
     } else {
       const boundedTargetIndex = Math.max(0, Math.min(targetIndex, nextTargetPlayers.length));
       nextTargetPlayers.splice(boundedTargetIndex, 0, movedPlayer);
-      if (draggingSlot.side === "top") {
+      if (sourceSlot.side === "top") {
         setOptimisticTopOrderedPlayers(sourceWithoutPlayer);
         setOptimisticBottomOrderedPlayers(nextTargetPlayers);
         persistOrders(
@@ -629,6 +629,57 @@ function LineupPreviewCard({
         targetSide: side,
       });
     }
+  }
+
+  function handleDropOnSlot(
+    side: LineupSide,
+    targetIndex: number,
+    targetStarterSlotIndex?: number,
+    isTargetEmptyStarter?: boolean,
+  ) {
+    if (!canDrag || !draggingSlot) return;
+    applyDropFromSlot(draggingSlot, side, targetIndex, targetStarterSlotIndex, isTargetEmptyStarter);
+    setDraggingSlot(null);
+    setTapSelectedSlot(null);
+  }
+
+  function handleTapOnSlot(
+    side: LineupSide,
+    targetIndex: number,
+    targetStarterSlotIndex: number | null,
+    isTargetEmptyStarter: boolean,
+  ) {
+    if (!canDrag) return;
+    if (!tapSelectedSlot) {
+      if (isTargetEmptyStarter) return;
+      setTapSelectedSlot({ side, index: targetIndex, starterSlotIndex: targetStarterSlotIndex });
+      return;
+    }
+
+    const isSameSlot = tapSelectedSlot.side === side
+      && tapSelectedSlot.index === targetIndex
+      && tapSelectedSlot.starterSlotIndex === targetStarterSlotIndex;
+    if (isSameSlot) {
+      setTapSelectedSlot(null);
+      return;
+    }
+
+    applyDropFromSlot(
+      tapSelectedSlot,
+      side,
+      targetIndex,
+      targetStarterSlotIndex ?? undefined,
+      isTargetEmptyStarter,
+    );
+    setTapSelectedSlot(null);
+    setDraggingSlot(null);
+  }
+
+  function handleTapBenchEnd(side: LineupSide) {
+    if (!canDrag || !tapSelectedSlot) return;
+    const benchEndIndex = side === "top" ? topOrderedPlayers.length : bottomOrderedPlayers.length;
+    applyDropFromSlot(tapSelectedSlot, side, benchEndIndex);
+    setTapSelectedSlot(null);
     setDraggingSlot(null);
   }
 
@@ -641,6 +692,11 @@ function LineupPreviewCard({
           {hasBottom && bottomFormation ? <span>{bottomLabel}: {bottomFormation}</span> : null}
         </div>
       </div>
+      {canDrag ? (
+        <p className="border-b border-line bg-surface px-3 py-1.5 text-[11px] text-ink-subtle sm:hidden">
+          Chạm cầu thủ để chọn, rồi chạm vị trí đích để đổi chỗ.
+        </p>
+      ) : null}
 
       {hasBottom ? (
         <div className="border-b border-line bg-surface-muted/25 px-3 py-2">
@@ -649,12 +705,15 @@ function LineupPreviewCard({
             side="top"
             players={topBench}
             benchStartIndex={topLayout.benchStartIndex}
-            canManage={canManage}
+            canManage={canDrag}
             draggingSlot={draggingSlot}
+            tapSelectedSlot={tapSelectedSlot}
             onDragStart={(side, index, starterSlotIndex) =>
               setDraggingSlot({ side, index, starterSlotIndex })}
             onDragEnd={() => setDraggingSlot(null)}
             onDropOnSlot={handleDropOnSlot}
+            onTapSlot={handleTapOnSlot}
+            onTapBenchEnd={handleTapBenchEnd}
             onDropToBenchEnd={(side) =>
               handleDropOnSlot(side, side === "top" ? topOrderedPlayers.length : bottomOrderedPlayers.length)}
           />
@@ -674,10 +733,12 @@ function LineupPreviewCard({
             side="top"
             canManage={canDrag}
             draggingSlot={draggingSlot}
+            tapSelectedSlot={tapSelectedSlot}
             onDragStart={(side, index, starterSlotIndex) =>
               setDraggingSlot({ side, index, starterSlotIndex })}
             onDragEnd={() => setDraggingSlot(null)}
             onDropOnSlot={handleDropOnSlot}
+            onTapSlot={handleTapOnSlot}
             emptyText="Chưa có cầu thủ"
           />
         </div>
@@ -690,10 +751,12 @@ function LineupPreviewCard({
               reverse
               canManage={canDrag}
               draggingSlot={draggingSlot}
+              tapSelectedSlot={tapSelectedSlot}
               onDragStart={(side, index, starterSlotIndex) =>
                 setDraggingSlot({ side, index, starterSlotIndex })}
               onDragEnd={() => setDraggingSlot(null)}
               onDropOnSlot={handleDropOnSlot}
+              onTapSlot={handleTapOnSlot}
               emptyText="Chưa có cầu thủ"
             />
           </div>
@@ -709,10 +772,13 @@ function LineupPreviewCard({
             benchStartIndex={bottomLayout.benchStartIndex}
             canManage={canDrag}
             draggingSlot={draggingSlot}
+            tapSelectedSlot={tapSelectedSlot}
             onDragStart={(side, index, starterSlotIndex) =>
               setDraggingSlot({ side, index, starterSlotIndex })}
             onDragEnd={() => setDraggingSlot(null)}
             onDropOnSlot={handleDropOnSlot}
+            onTapSlot={handleTapOnSlot}
+            onTapBenchEnd={handleTapBenchEnd}
             onDropToBenchEnd={(side) =>
               handleDropOnSlot(side, side === "top" ? topOrderedPlayers.length : bottomOrderedPlayers.length)}
           />
@@ -726,10 +792,13 @@ function LineupPreviewCard({
             benchStartIndex={topLayout.benchStartIndex}
             canManage={canDrag}
             draggingSlot={draggingSlot}
+            tapSelectedSlot={tapSelectedSlot}
             onDragStart={(side, index, starterSlotIndex) =>
               setDraggingSlot({ side, index, starterSlotIndex })}
             onDragEnd={() => setDraggingSlot(null)}
             onDropOnSlot={handleDropOnSlot}
+            onTapSlot={handleTapOnSlot}
+            onTapBenchEnd={handleTapBenchEnd}
             onDropToBenchEnd={(side) =>
               handleDropOnSlot(side, side === "top" ? topOrderedPlayers.length : bottomOrderedPlayers.length)}
           />
@@ -745,9 +814,11 @@ function LineupRows({
   reverse = false,
   canManage,
   draggingSlot,
+  tapSelectedSlot,
   onDragStart,
   onDragEnd,
   onDropOnSlot,
+  onTapSlot,
   emptyText,
 }: {
   rows: LineupSlot[][];
@@ -755,6 +826,7 @@ function LineupRows({
   reverse?: boolean;
   canManage: boolean;
   draggingSlot: DraggingLineupSlot | null;
+  tapSelectedSlot: DraggingLineupSlot | null;
   onDragStart: (side: LineupSide, index: number, starterSlotIndex: number | null) => void;
   onDragEnd: () => void;
   onDropOnSlot: (
@@ -762,6 +834,12 @@ function LineupRows({
     index: number,
     targetStarterSlotIndex?: number,
     isTargetEmptyStarter?: boolean,
+  ) => void;
+  onTapSlot: (
+    side: LineupSide,
+    index: number,
+    starterSlotIndex: number | null,
+    isTargetEmptyStarter: boolean,
   ) => void;
   emptyText: string;
 }) {
@@ -797,6 +875,7 @@ function LineupRows({
                 draggable={canManage}
                 onDragStart={() => onDragStart(side, slot.index, slot.starterSlotIndex)}
                 onDragEnd={onDragEnd}
+                onClick={() => onTapSlot(side, slot.index, slot.starterSlotIndex, false)}
                 onDragOver={(event) => {
                   if (!canManage || !draggingSlot) return;
                   event.preventDefault();
@@ -808,6 +887,9 @@ function LineupRows({
                 }}
                 className={cn(
                   canManage ? "cursor-grab active:cursor-grabbing" : undefined,
+                  tapSelectedSlot?.side === side && tapSelectedSlot.index === slot.index
+                    ? "rounded-md bg-brand-soft/60 ring-1 ring-brand/40"
+                    : undefined,
                   draggingSlot?.side === side && draggingSlot.index === slot.index
                     ? "opacity-55"
                     : undefined,
@@ -818,6 +900,7 @@ function LineupRows({
             ) : (
               <div
                 key={`empty-${slot.starterSlotIndex}`}
+                onClick={() => onTapSlot(side, slot.index, slot.starterSlotIndex, true)}
                 onDragOver={(event) => {
                   if (!canManage || !draggingSlot) return;
                   event.preventDefault();
@@ -863,9 +946,12 @@ function BenchStrip({
   benchStartIndex,
   canManage,
   draggingSlot,
+  tapSelectedSlot,
   onDragStart,
   onDragEnd,
   onDropOnSlot,
+  onTapSlot,
+  onTapBenchEnd,
   onDropToBenchEnd,
 }: {
   label: string;
@@ -874,6 +960,7 @@ function BenchStrip({
   benchStartIndex: number;
   canManage: boolean;
   draggingSlot: DraggingLineupSlot | null;
+  tapSelectedSlot: DraggingLineupSlot | null;
   onDragStart: (side: LineupSide, index: number, starterSlotIndex: number | null) => void;
   onDragEnd: () => void;
   onDropOnSlot: (
@@ -882,6 +969,13 @@ function BenchStrip({
     targetStarterSlotIndex?: number,
     isTargetEmptyStarter?: boolean,
   ) => void;
+  onTapSlot: (
+    side: LineupSide,
+    index: number,
+    starterSlotIndex: number | null,
+    isTargetEmptyStarter: boolean,
+  ) => void;
+  onTapBenchEnd: (side: LineupSide) => void;
   onDropToBenchEnd: (side: LineupSide) => void;
 }) {
   return (
@@ -891,6 +985,10 @@ function BenchStrip({
       </p>
       {players.length === 0 ? (
         <div
+          onClick={() => {
+            if (!canManage) return;
+            onTapBenchEnd(side);
+          }}
           onDragOver={(event) => {
             if (!canManage || !draggingSlot) return;
             event.preventDefault();
@@ -928,6 +1026,7 @@ function BenchStrip({
                 draggable={canManage}
                 onDragStart={() => onDragStart(side, benchStartIndex + index, null)}
                 onDragEnd={onDragEnd}
+                onClick={() => onTapSlot(side, benchStartIndex + index, null, false)}
                 onDragOver={(event) => {
                   if (!canManage || !draggingSlot) return;
                   event.preventDefault();
@@ -938,7 +1037,12 @@ function BenchStrip({
                   event.stopPropagation();
                   onDropOnSlot(side, benchStartIndex + index);
                 }}
-                className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1"
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1",
+                  tapSelectedSlot?.side === side && tapSelectedSlot.index === benchStartIndex + index
+                    ? "border-brand/50 bg-brand-soft/60"
+                    : undefined,
+                )}
               >
                 <TeamAvatar
                   name={player.name}
