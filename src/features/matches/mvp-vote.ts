@@ -489,7 +489,7 @@ export async function getUserVote(sessionId: string, userId: string) {
 }
 
 export async function getSessionResultSummary(sessionId: string) {
-  const [session, votes] = await Promise.all([
+  const [session, votes, voters] = await Promise.all([
     db.matchMvpVoteSession.findUnique({
       where: { id: sessionId },
       select: {
@@ -501,12 +501,20 @@ export async function getSessionResultSummary(sessionId: string) {
       where: { sessionId },
       _count: { _all: true },
     }),
+    db.matchMvpVote.findMany({
+      where: { sessionId },
+      select: {
+        voterUserId: true,
+      },
+    }),
   ]);
 
   const counts = new Map(votes.map((vote) => [vote.candidateUserId, vote._count._all]));
+  const voterUserIds = new Set(voters.map((vote) => vote.voterUserId));
   return {
     winnerUserId: session?.winnerUserId ?? null,
     voteCounts: counts,
+    voterUserIds,
   };
 }
 

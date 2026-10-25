@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { FieldType, InternalSquadSide } from "@/generated/prisma/enums";
 import { TeamAvatar } from "@/features/teams/components/team-avatar";
@@ -53,6 +61,7 @@ const deadlineTimeFormatter = new Intl.DateTimeFormat("vi-VN", {
 export function MvpVotePanel({
   matchId,
   candidates,
+  identityVoterCandidates,
   initialCandidateUserId,
   voteCounts,
   isClosed,
@@ -68,6 +77,7 @@ export function MvpVotePanel({
 }: {
   matchId: string;
   candidates: Candidate[];
+  identityVoterCandidates: Candidate[];
   initialCandidateUserId: string | null;
   voteCounts: VoteCount[];
   isClosed: boolean;
@@ -104,12 +114,13 @@ export function MvpVotePanel({
     closeMvpVote,
     initialCloseState,
   );
+  const [voteThanksDismissed, setVoteThanksDismissed] = useState(false);
+  const showVoteThanksDialog = submitState.ok === true && !voteThanksDismissed;
 
   useEffect(() => {
-    if (submitState.ok || closeState.ok) {
-      router.refresh();
-    }
-  }, [closeState.ok, router, submitState.ok]);
+    if (!closeState.ok) return;
+    router.refresh();
+  }, [closeState.ok, router]);
 
   useEffect(() => {
     function handleLineupOrderUpdated(event: Event) {
@@ -162,6 +173,14 @@ export function MvpVotePanel({
     () => new Map(candidates.map((candidate) => [candidate.userId, candidate])),
     [candidates],
   );
+  const identityVoterByUserId = useMemo(
+    () => new Map(identityVoterCandidates.map((candidate) => [candidate.userId, candidate])),
+    [identityVoterCandidates],
+  );
+  const activeSelectedVoterUserId = isIdentityVoteMode && selectedVoterUserId
+    && !identityVoterByUserId.has(selectedVoterUserId)
+    ? ""
+    : selectedVoterUserId;
   const normalizedLineupCandidates = useMemo(
     () =>
       lineupCandidates.filter((candidate) => candidateByUserId.has(candidate.userId)),
@@ -215,7 +234,10 @@ export function MvpVotePanel({
   const canSubmitVote =
     hasCandidates
     && Boolean(selectedCandidateId)
-    && (canVoteAsLoggedMember || (isIdentityVoteMode && Boolean(selectedVoterUserId)));
+    && (canVoteAsLoggedMember || (isIdentityVoteMode && Boolean(activeSelectedVoterUserId)));
+  const selectedVoterLabel = activeSelectedVoterUserId
+    ? (identityVoterByUserId.get(activeSelectedVoterUserId)?.name ?? "")
+    : "";
   const deadlineLabel = useMemo(() => {
     const deadline = new Date(expiresAt);
     if (Number.isNaN(deadline.getTime())) return null;
@@ -224,6 +246,37 @@ export function MvpVotePanel({
 
   return (
     <div className="flex flex-col gap-4">
+      <Dialog
+        open={showVoteThanksDialog}
+        onOpenChange={(open) => {
+          if (open) return;
+          setVoteThanksDismissed(true);
+          router.refresh();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              🎉 Vote MVP thành công
+            </DialogTitle>
+            <DialogDescription className="text-sm text-ink-muted">
+              Cảm ơn bạn đã vote! Kết quả đã được cập nhật.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setVoteThanksDismissed(true);
+                router.refresh();
+              }}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card className="gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={isClosed ? "secondary" : "outline"}>
@@ -252,6 +305,7 @@ export function MvpVotePanel({
               bottomBenchPlayers={isInternalMatch ? bottomBenchPlayers : undefined}
               selectedCandidateId={selectedCandidateId}
               voteCountsByCandidate={countsByCandidate}
+              showVoteCounts={isOwner}
               clickable={canVote}
               onSelect={(candidateUserId) => setSelectedCandidateId(candidateUserId)}
             />
@@ -261,30 +315,38 @@ export function MvpVotePanel({
           canVote ? (
             <form action={submitAction} className="flex flex-col gap-3">
               <input type="hidden" name="matchId" value={matchId} />
-              <input type="hidden" name="voterUserId" value={selectedVoterUserId} />
+              <input type="hidden" name="voterUserId" value={activeSelectedVoterUserId} />
               <input type="hidden" name="candidateUserId" value={selectedCandidateId} />
 
               {isIdentityVoteMode ? (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-sm font-semibold text-ink">Bạn là ai?</p>
                   <Select
-                    value={selectedVoterUserId}
+                    value={activeSelectedVoterUserId}
                     onValueChange={(value) => setSelectedVoterUserId(String(value))}
                   >
                     <SelectTrigger className="h-10 w-full">
-                      <SelectValue placeholder="Chọn tên của bạn trong đội" />
+                      <SelectValue placeholder="Chọn tên của bạn trong đội">
+                        {selectedVoterLabel}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {candidates.map((candidate) => (
+                      {identityVoterCandidates.map((candidate) => (
                         <SelectItem key={candidate.userId} value={candidate.userId}>
                           {candidate.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-ink-subtle">
-                    Không cần đăng nhập. Mỗi cầu thủ trong danh sách có 1 phiếu.
-                  </p>
+                  {identityVoterCandidates.length > 0 ? (
+                    <p className="text-xs text-ink-subtle">
+                      Không cần đăng nhập. Mỗi cầu thủ trong danh sách có 1 phiếu.
+                    </p>
+                  ) : (
+                    <p className="text-xs font-semibold text-ink-subtle">
+                      Tất cả cầu thủ đã gửi phiếu.
+                    </p>
+                  )}
                 </div>
               ) : null}
               {selectedCandidateId ? (
@@ -328,11 +390,19 @@ export function MvpVotePanel({
             </p>
             <ul className="flex flex-col gap-1 text-sm text-ink-muted">
               {candidates.map((candidate) => (
-                <li key={candidate.userId} className="flex items-center justify-between">
+                <li
+                  key={candidate.userId}
+                  className={cn(
+                    "flex items-center",
+                    isOwner ? "justify-between" : "justify-start",
+                  )}
+                >
                   <span>{candidate.name}</span>
-                  <span className="font-semibold text-ink">
-                    {countsByCandidate.get(candidate.userId) ?? 0} phiếu
-                  </span>
+                  {isOwner ? (
+                    <span className="font-semibold text-ink">
+                      {countsByCandidate.get(candidate.userId) ?? 0} phiếu
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -366,6 +436,7 @@ function MvpLineupBoard({
   bottomBenchPlayers,
   selectedCandidateId,
   voteCountsByCandidate,
+  showVoteCounts,
   clickable,
   onSelect,
 }: {
@@ -379,6 +450,7 @@ function MvpLineupBoard({
   bottomBenchPlayers?: CandidateLineupPlayer[];
   selectedCandidateId: string;
   voteCountsByCandidate: Map<string, number>;
+  showVoteCounts: boolean;
   clickable: boolean;
   onSelect: (candidateUserId: string) => void;
 }) {
@@ -404,6 +476,7 @@ function MvpLineupBoard({
             players={topBenchPlayers}
             selectedCandidateId={selectedCandidateId}
             voteCountsByCandidate={voteCountsByCandidate}
+            showVoteCounts={showVoteCounts}
             clickable={clickable}
             onSelect={onSelect}
           />
@@ -422,6 +495,7 @@ function MvpLineupBoard({
             rows={topRows}
             selectedCandidateId={selectedCandidateId}
             voteCountsByCandidate={voteCountsByCandidate}
+            showVoteCounts={showVoteCounts}
             clickable={clickable}
             onSelect={onSelect}
           />
@@ -434,6 +508,7 @@ function MvpLineupBoard({
               reverse
               selectedCandidateId={selectedCandidateId}
               voteCountsByCandidate={voteCountsByCandidate}
+              showVoteCounts={showVoteCounts}
               clickable={clickable}
               onSelect={onSelect}
             />
@@ -448,6 +523,7 @@ function MvpLineupBoard({
             players={bottomBenchPlayers ?? []}
             selectedCandidateId={selectedCandidateId}
             voteCountsByCandidate={voteCountsByCandidate}
+            showVoteCounts={showVoteCounts}
             clickable={clickable}
             onSelect={onSelect}
           />
@@ -459,6 +535,7 @@ function MvpLineupBoard({
             players={topBenchPlayers}
             selectedCandidateId={selectedCandidateId}
             voteCountsByCandidate={voteCountsByCandidate}
+            showVoteCounts={showVoteCounts}
             clickable={clickable}
             onSelect={onSelect}
           />
@@ -473,6 +550,7 @@ function MvpLineupRows({
   reverse = false,
   selectedCandidateId,
   voteCountsByCandidate,
+  showVoteCounts,
   clickable,
   onSelect,
 }: {
@@ -480,6 +558,7 @@ function MvpLineupRows({
   reverse?: boolean;
   selectedCandidateId: string;
   voteCountsByCandidate: Map<string, number>;
+  showVoteCounts: boolean;
   clickable: boolean;
   onSelect: (candidateUserId: string) => void;
 }) {
@@ -514,6 +593,7 @@ function MvpLineupRows({
               player={player}
               selected={selectedCandidateId === player.userId}
               votes={voteCountsByCandidate.get(player.userId) ?? 0}
+              showVoteCounts={showVoteCounts}
               clickable={clickable}
               onSelect={onSelect}
             />
@@ -528,12 +608,14 @@ function MvpLineupPlayerButton({
   player,
   selected,
   votes,
+  showVoteCounts,
   clickable,
   onSelect,
 }: {
   player: CandidateLineupPlayer;
   selected: boolean;
   votes: number;
+  showVoteCounts: boolean;
   clickable: boolean;
   onSelect: (candidateUserId: string) => void;
 }) {
@@ -558,7 +640,9 @@ function MvpLineupPlayerButton({
         {player.jerseyNumber != null ? `${player.jerseyNumber} ` : ""}
         {player.name}
       </p>
-      <span className="text-[10px] leading-3 text-ink-subtle">{votes} phiếu</span>
+      {showVoteCounts ? (
+        <span className="text-[10px] leading-3 text-ink-subtle">{votes} phiếu</span>
+      ) : null}
     </button>
   );
 }
@@ -568,6 +652,7 @@ function MvpBenchStrip({
   players,
   selectedCandidateId,
   voteCountsByCandidate,
+  showVoteCounts,
   clickable,
   onSelect,
 }: {
@@ -575,6 +660,7 @@ function MvpBenchStrip({
   players: CandidateLineupPlayer[];
   selectedCandidateId: string;
   voteCountsByCandidate: Map<string, number>;
+  showVoteCounts: boolean;
   clickable: boolean;
   onSelect: (candidateUserId: string) => void;
 }) {
@@ -612,9 +698,11 @@ function MvpBenchStrip({
                       {player.jerseyNumber != null ? `${player.jerseyNumber} ` : ""}
                       {player.name}
                     </span>
-                    <span className="text-[10px] text-ink-subtle">
-                      {voteCountsByCandidate.get(player.userId) ?? 0}
-                    </span>
+                    {showVoteCounts ? (
+                      <span className="text-[10px] text-ink-subtle">
+                        {voteCountsByCandidate.get(player.userId) ?? 0}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               );

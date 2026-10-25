@@ -39,6 +39,7 @@ type MatchMvpVoteTabData = {
   expiresAt: string | null;
   winnerUserId: string | null;
   candidates: { userId: string; name: string }[];
+  identityVoterCandidates: { userId: string; name: string }[];
   voteCounts: { candidateUserId: string; count: number }[];
   initialCandidateUserId: string | null;
   canVoteAsLoggedMember: boolean;
@@ -318,6 +319,7 @@ export function MatchDetailTabs({
           <MvpVotePanel
             matchId={match.id}
             candidates={mvpVote.candidates}
+            identityVoterCandidates={mvpVote.identityVoterCandidates}
             initialCandidateUserId={mvpVote.initialCandidateUserId}
             voteCounts={mvpVote.voteCounts}
             isClosed={mvpVote.isClosed}

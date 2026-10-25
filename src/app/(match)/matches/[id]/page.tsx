@@ -90,6 +90,9 @@ export default async function MatchDetailPage({
     candidateUserId: candidate.userId,
     count: voteSummary?.voteCounts.get(candidate.userId) ?? 0,
   }));
+  const identityVoterCandidates = candidateRows.filter(
+    (candidate) => !voteSummary?.voterUserIds.has(candidate.userId),
+  );
   const playableUserIds = new Set(playingSquadRows.map((member) => member.userId));
   const viewerIsSquadMember = viewer ? playableUserIds.has(viewer.id) : false;
   const resultMembers = members.filter((member) => playableUserIds.has(member.userId));
@@ -109,6 +112,7 @@ export default async function MatchDetailPage({
         expiresAt: voteSession?.expiresAt.toISOString() ?? null,
         winnerUserId: voteSummary?.winnerUserId ?? null,
         candidates: candidateRows,
+        identityVoterCandidates,
         voteCounts,
         initialCandidateUserId:
           userVote && playableUserIds.has(userVote.candidateUserId)
@@ -116,7 +120,7 @@ export default async function MatchDetailPage({
             : null,
         canVoteAsLoggedMember: Boolean(viewer && viewerIsSquadMember && voteSession && voteSession.closedAt == null),
         allowIdentityVoteWithoutLogin: Boolean(
-          candidateRows.length > 0
+          identityVoterCandidates.length > 0
           && voteSession
           && voteSession.closedAt == null
           && (!viewer || !viewerIsSquadMember),
