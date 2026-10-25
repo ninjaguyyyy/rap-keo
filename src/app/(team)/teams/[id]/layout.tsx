@@ -113,8 +113,8 @@ export default async function TeamLayout({
 
       {/* Nội dung page: card nhô lên đè header (-mt-4 rounded-t-3xl) — consistent
           với layout (main). Các tabs render trong khung max-w-md căn giữa. */}
-      <main className="relative z-10 -mt-4 rounded-t-3xl bg-surface-muted px-4 py-4">
-        <div className="mx-auto w-full max-w-md">{children}</div>
+      <main className="relative z-10 -mt-4 rounded-t-3xl bg-surface-muted px-4 py-4 sm:px-4">
+        <div className="mx-auto w-full max-w-none sm:max-w-md">{children}</div>
       </main>
     </div>
   );

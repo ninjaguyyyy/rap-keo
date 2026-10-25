@@ -157,6 +157,7 @@ export type TeamPlayerStandingRow = {
   userId: string;
   name: string;
   jerseyNumber: number | null;
+  hometown: string | null;
   rank: number;
   goals: number;
   assists: number;
@@ -339,6 +340,7 @@ export async function getTeamPlayerStandings(
         userId: member.userId,
         name: memberNameById.get(member.userId) ?? "—",
         jerseyNumber: member.jerseyNumber,
+        hometown: member.user.hometown,
         rank: 0,
         goals,
         assists,

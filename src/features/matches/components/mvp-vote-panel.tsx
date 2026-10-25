@@ -465,8 +465,8 @@ function MvpLineupBoard({
 
   return (
     <Card className="gap-0 overflow-hidden border border-line/80 bg-surface p-0 shadow-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-ink-muted">Lineup vote MVP</h3>
+      <div className="flex items-center justify-between gap-2 border-b border-line px-2 py-2">
+        <h3 className="text-[1.2rem] font-bold uppercase tracking-wide text-ink-muted">Lineup vote MVP</h3>
         <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[11px] font-semibold text-ink-muted">
           <span>{topLabel}: {topFormation}</span>
           {hasBottom && bottomFormation ? <span>{bottomLabel}: {bottomFormation}</span> : null}
@@ -474,7 +474,7 @@ function MvpLineupBoard({
       </div>
 
       {hasBottom ? (
-        <div className="border-b border-line bg-surface-muted/25 px-3 py-2">
+        <div className="border-b border-line bg-surface-muted/25 px-2 py-2">
           <MvpBenchStrip
             label={`${topLabel} dự bị`}
             players={topBenchPlayers}
@@ -521,7 +521,7 @@ function MvpLineupBoard({
       </div>
 
       {hasBottom ? (
-        <div className="border-t border-line bg-surface-muted/25 px-3 py-2">
+        <div className="border-t border-line bg-surface-muted/25 px-2 py-2">
           <MvpBenchStrip
             label={`${bottomLabel} dự bị`}
             players={bottomBenchPlayers ?? []}
@@ -533,7 +533,7 @@ function MvpLineupBoard({
           />
         </div>
       ) : hasBenchSection ? (
-        <div className="border-t border-line bg-surface-muted/25 px-3 py-2">
+        <div className="border-t border-line bg-surface-muted/25 px-2 py-2">
           <MvpBenchStrip
             label="Dự bị"
             players={topBenchPlayers}

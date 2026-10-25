@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { MapPinIcon } from "@/features/matches/components/card-shared";
 import { formatPlayTime } from "@/features/matches/labels";
 import { TeamAvatar } from "@/features/teams/components/team-avatar";
@@ -775,6 +776,8 @@ function ScoreOrVs({
 // --- Standings table (tab "Bảng xếp hạng"). ---
 
 function StandingsTable({ standings }: { standings: StandingRow[] }) {
+  const [mode, setMode] = useState<"short" | "full">("short");
+
   if (standings.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
@@ -786,63 +789,111 @@ function StandingsTable({ standings }: { standings: StandingRow[] }) {
     );
   }
 
+  const isShortMode = mode === "short";
+  const columnsClassName = isShortMode
+    ? "grid-cols-[2.5rem_minmax(11rem,1fr)_2.25rem_2.25rem_2.75rem_2.75rem]"
+    : "grid-cols-[2.5rem_minmax(11rem,1fr)_2.25rem_2.25rem_2.25rem_2.25rem_2.5rem_2.5rem_2.75rem_2.75rem]";
+
+  function rankAccentClass(rank: number) {
+    if (rank <= 4) return "bg-type-players";
+    if (rank === 5) return "bg-accent-yellow";
+    return "bg-transparent";
+  }
+
+  function formatGoalDiff(value: number) {
+    return `${value > 0 ? "+" : ""}${value}`;
+  }
+
   return (
-    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
-      <div className="border-b border-line px-4 py-2.5">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
-          Bảng xếp hạng
-        </h2>
+    <Card className="gap-3 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-3">
+      <div className="rounded-xl bg-surface-muted p-1">
+        <div className="grid grid-cols-2 gap-1">
+          <button
+            type="button"
+            onClick={() => setMode("short")}
+            className={cn(
+              "rounded-lg px-3 py-2 text-base font-semibold transition-colors",
+              isShortMode
+                ? "bg-surface text-ink shadow-sm"
+                : "text-ink-muted hover:bg-surface/60",
+            )}
+            aria-pressed={isShortMode}
+          >
+            Short
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("full")}
+            className={cn(
+              "rounded-lg px-3 py-2 text-base font-semibold transition-colors",
+              !isShortMode
+                ? "bg-surface text-ink shadow-sm"
+                : "text-ink-muted hover:bg-surface/60",
+            )}
+            aria-pressed={!isShortMode}
+          >
+            Full
+          </button>
+        </div>
       </div>
+
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line text-xs text-ink-muted">
-              <th className="px-3 py-2 text-left font-semibold">#</th>
-              <th className="px-3 py-2 text-left font-semibold">Đội</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Trận đá">Tr</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Thắng">T</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Hòa">H</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Thua">B</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Hiệu số">HS</th>
-              <th className="px-2 py-2 text-center font-semibold" title="Bàn thắng">Ghi</th>
-              <th className="px-3 py-2 text-center font-semibold" title="Điểm">Đ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((row, idx) => (
-              <tr
-                key={row.participantId}
-                className="border-b border-line last:border-0"
-              >
-                <td className="px-3 py-2 font-bold text-ink-muted">
-                  {idx + 1}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <TeamAvatar name={row.displayName} size="sm" />
-                    <span className="truncate font-semibold text-ink">
-                      {row.displayName}
-                    </span>
+        <div className={cn("min-w-[560px]", !isShortMode ? "min-w-[760px]" : undefined)}>
+          <div className={cn("grid items-center gap-2 px-3 py-2 text-[11px] font-semibold text-ink-muted", columnsClassName)}>
+            <span className="text-left">Pos</span>
+            <span className="text-left">Team</span>
+            <span className="text-center">Pl</span>
+            <span className="text-center">W</span>
+            {isShortMode ? null : (
+              <>
+                <span className="text-center">D</span>
+                <span className="text-center">L</span>
+                <span className="text-center">GF</span>
+                <span className="text-center">GA</span>
+              </>
+            )}
+            <span className="text-center">GD</span>
+            <span className="text-center">Pts</span>
+          </div>
+
+          <ul className="flex flex-col gap-2">
+            {standings.map((row, idx) => {
+              const rank = idx + 1;
+              return (
+                <li
+                  key={row.participantId}
+                  className="relative overflow-hidden rounded-xl border border-line/70 bg-surface"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn("absolute inset-y-3 left-0 w-1 rounded-r-full", rankAccentClass(rank))}
+                  />
+                  <div className={cn("grid items-center gap-2 px-3 py-3 text-sm", columnsClassName)}>
+                    <span className="font-black tabular-nums text-ink">{String(rank).padStart(2, "0")}</span>
+                    <div className="flex items-center gap-2">
+                      <TeamAvatar name={row.displayName} size="sm" />
+                      <span className="truncate text-[1.1rem] leading-6 font-black text-ink">
+                        {row.displayName}
+                      </span>
+                    </div>
+                    <span className="text-center tabular-nums text-ink">{row.played}</span>
+                    <span className="text-center tabular-nums text-ink">{row.won}</span>
+                    {isShortMode ? null : (
+                      <>
+                        <span className="text-center tabular-nums text-ink">{row.drawn}</span>
+                        <span className="text-center tabular-nums text-ink">{row.lost}</span>
+                        <span className="text-center tabular-nums text-ink">{row.goalsFor}</span>
+                        <span className="text-center tabular-nums text-ink">{row.goalsAgainst}</span>
+                      </>
+                    )}
+                    <span className="text-center tabular-nums text-ink">{formatGoalDiff(row.goalDiff)}</span>
+                    <span className="text-center font-extrabold tabular-nums text-brand">{row.points}</span>
                   </div>
-                </td>
-                <td className="px-2 py-2 text-center tabular-nums">{row.played}</td>
-                <td className="px-2 py-2 text-center tabular-nums">{row.won}</td>
-                <td className="px-2 py-2 text-center tabular-nums">{row.drawn}</td>
-                <td className="px-2 py-2 text-center tabular-nums">{row.lost}</td>
-                <td className="px-2 py-2 text-center tabular-nums">
-                  {row.goalDiff > 0 ? "+" : ""}
-                  {row.goalDiff}
-                </td>
-                <td className="px-2 py-2 text-center tabular-nums">
-                  {row.goalsFor}
-                </td>
-                <td className="px-3 py-2 text-center font-bold tabular-nums text-brand">
-                  {row.points}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </Card>
   );
