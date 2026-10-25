@@ -14,7 +14,6 @@ import type {
   TeamMatchItem,
   TeamRecentMatch,
   TeamMemberItem,
-  LeaderboardRow,
   TeamPlayerStandingRow,
 } from "../queries";
 import { EditTeamDialog } from "./edit-team-dialog";
@@ -24,7 +23,6 @@ import {
   PreviousGamesCard,
 } from "./team-match-cards";
 import { MemberList } from "./member-list";
-import { LeaderboardCard } from "./leaderboard-card";
 import { TeamMatchesPanel } from "./team-matches-panel";
 import { TeamPlayerStandingsCard } from "./team-player-standings-card";
 
@@ -44,7 +42,6 @@ export function TeamDetailTabs({
   matches,
   upcoming,
   members,
-  leaderboard,
   playerStandings,
 }: {
   team: TeamDetail;
@@ -53,7 +50,6 @@ export function TeamDetailTabs({
   matches: TeamRecentMatch[];
   upcoming: TeamMatchItem[];
   members: TeamMemberItem[];
-  leaderboard: LeaderboardRow[];
   playerStandings: TeamPlayerStandingRow[];
 }) {
   const router = useRouter();
@@ -121,7 +117,6 @@ export function TeamDetailTabs({
                 members={members}
                 canManage={canManage}
               />
-              <LeaderboardCard rows={leaderboard} />
             </div>
           ) : id === "matches" ? (
             <TeamMatchesPanel

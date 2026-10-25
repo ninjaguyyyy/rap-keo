@@ -6,7 +6,6 @@ import {
   getTeamUpcomingMatches,
   getTeamMatches,
   listTeamMembers,
-  getTeamLeaderboard,
   getTeamPlayerStandings,
 } from "@/features/teams/queries";
 import { TeamDetailTabs } from "@/features/teams/components/team-detail-tabs";
@@ -32,13 +31,12 @@ export default async function TeamDetailPage({
   }
 
   // Kèo sắp tới (1, cho card Next match) + tất cả sắp tới (tab Trận đấu) + đã đá
-  // + thành viên + leaderboard (chạy song song).
-  const [nextMatch, upcoming, matches, members, leaderboard, playerStandings] = await Promise.all([
+  // + thành viên + BXH cầu thủ (chạy song song).
+  const [nextMatch, upcoming, matches, members, playerStandings] = await Promise.all([
     getTeamNextMatch(id),
     getTeamUpcomingMatches(id),
     getTeamMatches(id),
     listTeamMembers(id),
-    getTeamLeaderboard(id),
     getTeamPlayerStandings(id),
   ]);
 
@@ -50,7 +48,6 @@ export default async function TeamDetailPage({
       upcoming={upcoming}
       matches={matches}
       members={members}
-      leaderboard={leaderboard}
       playerStandings={playerStandings}
     />
   );

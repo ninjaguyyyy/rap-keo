@@ -49,10 +49,10 @@ export function AddMemberDialog({ teamId }: { teamId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" className="h-9 px-3 text-sm" />}>
+      <DialogTrigger render={<Button size="sm" className="h-8 px-2.5 text-xs" />}>
         <svg
-          width="15"
-          height="15"
+          width="14"
+          height="14"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

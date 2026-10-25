@@ -35,16 +35,16 @@ export function MemberList({
           const jerseyText = m.jerseyNumber != null ? String(m.jerseyNumber) : "—";
           const hometownText = m.user.hometown?.trim() ?? "";
           return (
-            <li key={m.id} className="flex items-start gap-3 px-4 py-2.5">
+            <li key={m.id} className="flex items-center gap-2.5 px-4 py-2.5">
               <TeamAvatar
                 name={name}
                 imageUrl={m.user.avatarUrl}
-                size="lg"
-                className="h-14 w-14 rounded-2xl text-xl"
+                size="sm"
+                className="h-10 w-10 rounded-xl text-sm"
               />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xl font-bold text-ink">{name}</p>
-                <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm font-medium text-ink-muted">
+              <div className="min-h-10 min-w-0 flex-1">
+                <p className="truncate text-sm leading-5 font-bold text-ink">{name}</p>
+                <p className="flex min-w-0 items-center gap-1.5 text-xs leading-4 font-medium text-ink-muted">
                   <span className="shrink-0">{jerseyText}</span>
                   {hometownText ? (
                     <>
