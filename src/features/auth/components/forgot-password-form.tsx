@@ -198,7 +198,6 @@ export function ForgotPasswordForm() {
               autoComplete="tel"
               placeholder="0912345678"
               aria-invalid={!!phoneForm.formState.errors.phone}
-              className="h-12 rounded-xl text-base"
               {...phoneForm.register("phone")}
             />
             {phoneForm.formState.errors.phone ? (
@@ -217,7 +216,7 @@ export function ForgotPasswordForm() {
           <Button
             type="submit"
             disabled={phoneForm.formState.isSubmitting}
-            className="mt-1 h-12 w-full rounded-xl text-base"
+            className="mt-1 h-11 w-full text-base"
           >
             {phoneForm.formState.isSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
           </Button>
@@ -262,7 +261,7 @@ export function ForgotPasswordForm() {
             placeholder="000000"
             maxLength={6}
             aria-invalid={!!otpForm.formState.errors.otp}
-            className="h-12 rounded-xl text-center text-xl font-bold tracking-[0.3em] font-mono"
+            className="text-center text-xl font-bold tracking-[0.3em] font-mono"
             {...otpForm.register("otp")}
           />
           {otpForm.formState.errors.otp ? (
@@ -282,7 +281,6 @@ export function ForgotPasswordForm() {
             autoComplete="new-password"
             placeholder="••••••••"
             aria-invalid={!!otpForm.formState.errors.newPassword}
-            className="h-12 rounded-xl text-base"
             {...otpForm.register("newPassword")}
           />
           {otpForm.formState.errors.newPassword ? (
@@ -302,7 +300,6 @@ export function ForgotPasswordForm() {
             autoComplete="new-password"
             placeholder="••••••••"
             aria-invalid={!!otpForm.formState.errors.confirmNewPassword}
-            className="h-12 rounded-xl text-base"
             {...otpForm.register("confirmNewPassword")}
           />
           {otpForm.formState.errors.confirmNewPassword ? (
@@ -321,7 +318,7 @@ export function ForgotPasswordForm() {
         <Button
           type="submit"
           disabled={otpSubmitting}
-          className="mt-1 h-12 w-full rounded-xl text-base"
+          className="mt-1 h-11 w-full text-base"
         >
           {otpSubmitting ? "Đang đặt lại..." : "Đặt mật khẩu mới"}
         </Button>

@@ -174,7 +174,7 @@ export function PushNotificationToggle() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Ráp Kèo",
+          title: "Phủi League",
           body: "Thông báo test đã tới thiết bị của bạn.",
           url: "/notifications",
         }),

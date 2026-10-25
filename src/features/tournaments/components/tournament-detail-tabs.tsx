@@ -113,7 +113,7 @@ export function TournamentDetailTabs({
 
       {/* Tổng quan: info giải + actions. */}
       <TabsPanel value="overview" className="flex flex-col gap-4">
-        <Card className="gap-0 p-0">
+        <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
           <div className="flex flex-col gap-3 p-4">
             {/* Badge status + format + fieldType. */}
             <div className="flex flex-wrap items-center gap-1.5">
@@ -162,7 +162,7 @@ export function TournamentDetailTabs({
 
           {/* Action buttons theo quyền + status. */}
           {(canManage || canApprove) ? (
-            <div className="flex flex-wrap justify-end gap-1.5 border-t border-line px-4 py-2.5">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-line px-4 py-2.5">
               {/* Organizer actions. */}
               {canManage && (status === "DRAFT" || status === "REJECTED") ? (
                 <>
@@ -392,9 +392,9 @@ function ParticipantsList({
   memberOptionsByParticipant: Record<string, MemberOption[]>;
 }) {
   return (
-    <Card className="gap-0 p-0">
+    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
       <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
           Đội tham gia ({participants.length})
         </h2>
         {canEdit ? (
@@ -423,11 +423,11 @@ function ParticipantsList({
       ) : (
         <ul className="flex flex-col divide-y divide-line">
           {participants.map((p) => (
-            <li key={p.id} className="flex flex-col gap-2 px-4 py-3">
+            <li key={p.id} className="flex flex-col gap-2 px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <TeamAvatar name={p.displayName} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">
+                  <p className="truncate text-[15px] leading-5 font-semibold text-ink">
                     {p.displayName}
                     <span className="ml-1.5 text-xs font-normal text-ink-subtle">
                       ({p.players.length} cầu thủ)
@@ -490,9 +490,9 @@ function PlayersSubList({
     .filter((id): id is string => id !== null);
 
   return (
-    <div className="ml-10 flex flex-col gap-1.5 rounded-lg bg-surface-muted/40 p-2.5">
+    <div className="ml-10 flex flex-col gap-1.5 rounded-xl bg-surface-muted/50 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
           Cầu thủ ({participant.players.length})
         </p>
         {canEdit ? (
@@ -591,7 +591,7 @@ function MatchesList({
       {/* Header bar: title + nút Tạo lịch đấu / Sinh lại lịch (organizer). */}
       {canGenerate ? (
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
             Trận đấu ({matches.length})
           </h2>
           <GenerateFixturesButton
@@ -603,7 +603,7 @@ function MatchesList({
       ) : null}
 
       {matches.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
           <p className="text-sm text-ink-muted">Chưa có trận nào</p>
           {canGenerate ? (
             <p className="text-xs text-ink-subtle">
@@ -612,12 +612,12 @@ function MatchesList({
           ) : null}
         </div>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           {rounds.map((r) => {
             const list = roundMap.get(r) ?? [];
             return (
               <section key={r} className="flex flex-col gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
                   Vòng {r}
                   <span className="ml-1.5 text-xs font-normal text-ink-subtle">
                     ({list.length} trận)
@@ -640,7 +640,7 @@ function MatchesList({
 
           {legacy.length > 0 ? (
             <section className="flex flex-col gap-3">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
                 Khác
               </h2>
               <ul className="flex flex-col gap-3">
@@ -681,8 +681,8 @@ function TournamentMatchRow({
   const area = match.area;
 
   return (
-    <Card className="gap-0 p-0">
-      <div className="flex items-center gap-2 px-4 pt-3">
+    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
+      <div className="flex items-center gap-2 px-4 pt-2.5">
         <TeamSide name={home} />
         <ScoreOrVs
           home={match.homeScore}
@@ -693,7 +693,7 @@ function TournamentMatchRow({
         <TeamSide name={away} align="end" />
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-2">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-ink-subtle">
           <div className="flex items-center gap-1.5">
             <MapPinIcon />
@@ -733,7 +733,7 @@ function TeamSide({
       }
     >
       <TeamAvatar name={name} size="sm" />
-      <span className="truncate text-sm font-bold text-ink">{name}</span>
+      <span className="truncate text-[15px] font-bold text-ink">{name}</span>
     </div>
   );
 }
@@ -764,7 +764,7 @@ function ScoreOrVs({
     );
   }
   return (
-    <span className="shrink-0 px-2 font-mono text-2xl font-extrabold tabular-nums text-ink">
+    <span className="shrink-0 px-2 font-mono text-[2rem] leading-none font-black tabular-nums text-ink">
       {home}
       <span className="mx-1 text-ink-subtle">-</span>
       {away}
@@ -777,7 +777,7 @@ function ScoreOrVs({
 function StandingsTable({ standings }: { standings: StandingRow[] }) {
   if (standings.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
         <p className="text-sm text-ink-muted">Chưa có đội nào</p>
         <p className="text-xs text-ink-subtle">
           Bảng xếp hạng sẽ có khi giải bắt đầu và có trận đã đá.
@@ -787,9 +787,9 @@ function StandingsTable({ standings }: { standings: StandingRow[] }) {
   }
 
   return (
-    <Card className="gap-0 p-0">
+    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
       <div className="border-b border-line px-4 py-2.5">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
           Bảng xếp hạng
         </h2>
       </div>
@@ -814,10 +814,10 @@ function StandingsTable({ standings }: { standings: StandingRow[] }) {
                 key={row.participantId}
                 className="border-b border-line last:border-0"
               >
-                <td className="px-3 py-2.5 font-bold text-ink-muted">
+                <td className="px-3 py-2 font-bold text-ink-muted">
                   {idx + 1}
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <TeamAvatar name={row.displayName} size="sm" />
                     <span className="truncate font-semibold text-ink">
@@ -825,18 +825,18 @@ function StandingsTable({ standings }: { standings: StandingRow[] }) {
                     </span>
                   </div>
                 </td>
-                <td className="px-2 py-2.5 text-center tabular-nums">{row.played}</td>
-                <td className="px-2 py-2.5 text-center tabular-nums">{row.won}</td>
-                <td className="px-2 py-2.5 text-center tabular-nums">{row.drawn}</td>
-                <td className="px-2 py-2.5 text-center tabular-nums">{row.lost}</td>
-                <td className="px-2 py-2.5 text-center tabular-nums">
+                <td className="px-2 py-2 text-center tabular-nums">{row.played}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.won}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.drawn}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.lost}</td>
+                <td className="px-2 py-2 text-center tabular-nums">
                   {row.goalDiff > 0 ? "+" : ""}
                   {row.goalDiff}
                 </td>
-                <td className="px-2 py-2.5 text-center tabular-nums">
+                <td className="px-2 py-2 text-center tabular-nums">
                   {row.goalsFor}
                 </td>
-                <td className="px-3 py-2.5 text-center font-bold tabular-nums text-brand">
+                <td className="px-3 py-2 text-center font-bold tabular-nums text-brand">
                   {row.points}
                 </td>
               </tr>

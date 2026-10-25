@@ -2,33 +2,38 @@
 // trên iOS Safari cũ (Base UI dùng Object.hasOwn — ES2022).
 import "@/lib/polyfills";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Sora } from "next/font/google";
+import { StickySiteHeader } from "@/components/layout/sticky-site-header";
 import "./globals.css";
 
-// Inter — font sans chính của Ráp Kèo (theo DESIGN.md), khớp với mock football-design.html.
-const interSans = Inter({
-  variable: "--font-geist-sans",
+// Phase 1 (Premier League-inspired): body dùng Plus Jakarta Sans, heading dùng Sora.
+const appSans = Plus_Jakarta_Sans({
+  variable: "--font-app-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+const appHeading = Sora({
+  variable: "--font-app-heading",
   subsets: ["latin"],
   display: "swap",
 });
 
-// Bump favicon/logo hiển thị ở tab trình duyệt và màn hình chính.
-// Đặt icon cỡ lớn để trình duyệt ưu tiên dùng bản nét cao.
+// Đồng bộ favicon/app icon theo logo chính.
 export const metadata: Metadata = {
-  applicationName: "Ráp Kèo",
-  title: "Ráp Kèo",
-  description: "Ráp kèo bóng đá phủi — tìm đối, tìm người, tìm sân.",
-  themeColor: "#0a5c3a",
+  applicationName: "Phủi League",
+  title: "Phủi League",
+  description: "Phủi League — tìm đối, tìm người, tìm sân.",
+  themeColor: "#37003c",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ráp Kèo",
+    title: "Phủi League",
   },
   icons: {
     icon: [
-      { url: "/formation.png", sizes: "any" },
-      { url: "/formation.png", type: "image/png", sizes: "32x32" },
-      { url: "/formation.png", type: "image/png", sizes: "16x16" },
+      { url: "/logo-with-background.png", sizes: "any" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
@@ -41,8 +46,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${interSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html
+      lang="vi"
+      className={`${appSans.variable} ${appHeading.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-surface-muted">
+        <StickySiteHeader />
+        {children}
+      </body>
     </html>
   );
 }

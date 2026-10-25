@@ -7,6 +7,7 @@ import { requireUser, requireAdmin } from "@/lib/session";
 import { buildBalancedInternalTeamSides } from "./internal-squad-balance";
 import {
   createMatchSchema,
+  swapInternalSquadSidesSchema,
   updateInternalSquadSideSchema,
   updateMatchResultSchema,
   type CreateMatchState,
@@ -396,6 +397,80 @@ export async function setInternalMatchSquadSide(
   } catch (err) {
     console.error("setInternalMatchSquadSide error:", err);
     return { error: "Không cập nhật được bên thi đấu. Thử lại nhé." };
+  }
+}
+
+export async function swapInternalMatchSquadSides(
+  matchId: string,
+  firstUserId: string,
+  secondUserId: string,
+): Promise<MatchActionState> {
+  const user = await requireUser();
+  const parsed = swapInternalSquadSidesSchema.safeParse({
+    matchId,
+    firstUserId,
+    secondUserId,
+  });
+  if (!parsed.success) return { error: "Dữ liệu đổi vị trí không hợp lệ." };
+
+  const match = await db.match.findUnique({
+    where: { id: parsed.data.matchId },
+    select: { id: true, teamId: true, matchType: true },
+  });
+  if (!match) return { error: "Trận không tồn tại." };
+  if (!match.teamId) return { error: "Trận không thuộc đội nào." };
+  if (match.matchType !== "INTERNAL") {
+    return { error: "Chỉ trận nội bộ mới đổi vị trí giữa bên A/B." };
+  }
+
+  const team = await db.team.findUnique({
+    where: { id: match.teamId },
+    select: { ownerId: true },
+  });
+  if (!team) return { error: "Đội không tồn tại." };
+  if (team.ownerId !== user.id) {
+    return { error: "Chỉ đội trưởng mới có quyền chỉnh đội hình nội bộ." };
+  }
+
+  const squadMembers = await db.matchSquadMember.findMany({
+    where: {
+      matchId: parsed.data.matchId,
+      userId: { in: [parsed.data.firstUserId, parsed.data.secondUserId] },
+    },
+    select: { userId: true, internalSide: true },
+  });
+  if (squadMembers.length !== 2) {
+    return { error: "Không tìm thấy đủ 2 cầu thủ trong đội hình trận." };
+  }
+
+  const first = squadMembers.find((member) => member.userId === parsed.data.firstUserId);
+  const second = squadMembers.find((member) => member.userId === parsed.data.secondUserId);
+  if (!first || !second) {
+    return { error: "Không tìm thấy đủ 2 cầu thủ trong đội hình trận." };
+  }
+  if (!first.internalSide || !second.internalSide) {
+    return { error: "Cần chia bên A/B trước khi đổi vị trí." };
+  }
+  if (first.internalSide === second.internalSide) {
+    return { error: "Hai cầu thủ đang cùng một bên, không thể đổi chéo A/B." };
+  }
+
+  try {
+    await db.$transaction([
+      db.matchSquadMember.updateMany({
+        where: { matchId: parsed.data.matchId, userId: parsed.data.firstUserId },
+        data: { internalSide: second.internalSide },
+      }),
+      db.matchSquadMember.updateMany({
+        where: { matchId: parsed.data.matchId, userId: parsed.data.secondUserId },
+        data: { internalSide: first.internalSide },
+      }),
+    ]);
+    revalidatePath(`/matches/${parsed.data.matchId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("swapInternalMatchSquadSides error:", err);
+    return { error: "Không đổi được vị trí hai bên. Thử lại nhé." };
   }
 }
 

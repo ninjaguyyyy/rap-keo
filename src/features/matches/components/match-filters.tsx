@@ -50,7 +50,7 @@ function FilterSelect({
       value={value || ALL}
       onValueChange={(v) => onChange(paramKey, v === ALL ? "" : String(v))}
     >
-      <SelectTrigger className="h-10 w-full">
+      <SelectTrigger className="h-11 w-full">
         <SelectValue placeholder={label}>{triggerLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -91,7 +91,7 @@ function ChipGroup({
             className={cn(
               "inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold transition-colors",
               active
-                ? "border-brand bg-brand text-white"
+                ? "border-brand bg-brand text-white shadow-sm"
                 : "border-line bg-surface text-ink-muted hover:border-brand hover:text-brand",
             )}
           >
@@ -194,9 +194,9 @@ export function MatchFilters() {
             type="button"
             aria-label="Bộ lọc"
             className={cn(
-              "inline-flex h-10 max-w-full items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
+              "inline-flex h-11 max-w-full items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
               hasFilters
-                ? "border-brand bg-brand text-white"
+                ? "border-brand bg-brand text-white shadow-sm"
                 : "border-line bg-surface text-ink-muted hover:border-brand hover:text-brand",
             )}
           />
@@ -211,7 +211,7 @@ export function MatchFilters() {
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[min(20rem,calc(100vw-2rem))] p-3"
+        className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border-line p-3"
       >
         {/* Header: tiêu đề + nút "Xóa tất cả". */}
         <div className="flex items-center justify-between">

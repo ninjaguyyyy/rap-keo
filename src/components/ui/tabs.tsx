@@ -20,7 +20,7 @@ function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
       data-slot="tabs-list"
       className={cn(
         // Underline-style list: dải gạch chân dưới toàn bộ, cuộn ngang trên mobile.
-        "relative flex items-center gap-6 overflow-x-auto border-b border-line",
+        "relative flex items-center gap-5 overflow-x-auto border-b border-line/90",
         className
       )}
       {...props}
@@ -33,7 +33,7 @@ function TabsTab({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-tab"
       className={cn(
-        "relative shrink-0 cursor-default whitespace-nowrap border-b-2 border-transparent pb-2.5 pt-1 text-sm font-semibold text-ink-muted outline-none transition-colors select-none hover:text-ink data-[selected]:border-accent-yellow data-[selected]:text-ink focus-visible:text-ink",
+        "relative shrink-0 cursor-default whitespace-nowrap border-b-2 border-transparent pb-3 pt-1 text-sm font-semibold text-ink-muted outline-none transition-colors select-none hover:text-ink data-[selected]:border-accent-lime data-[selected]:text-ink focus-visible:text-ink",
         className
       )}
       {...props}

@@ -97,7 +97,6 @@ export function RegisterForm() {
             autoComplete="nickname"
             placeholder="VD: Tuấn Anh"
             aria-invalid={!!errors.name}
-            className="h-12 rounded-xl text-base"
             {...register("name")}
           />
           {errors.name ? (
@@ -116,7 +115,6 @@ export function RegisterForm() {
             autoComplete="tel"
             placeholder="0912345678"
             aria-invalid={!!errors.phone}
-            className="h-12 rounded-xl text-base"
             {...register("phone")}
           />
           {errors.phone ? (
@@ -134,7 +132,6 @@ export function RegisterForm() {
             autoComplete="new-password"
             placeholder="Tối thiểu 6 ký tự"
             aria-invalid={!!errors.password}
-            className="h-12 rounded-xl text-base"
             {...register("password")}
           />
           {errors.password ? (
@@ -151,7 +148,7 @@ export function RegisterForm() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="mt-1 h-12 w-full rounded-xl text-base"
+          className="mt-1 h-11 w-full text-base"
         >
           {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
         </Button>

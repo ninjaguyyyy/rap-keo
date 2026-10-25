@@ -10,7 +10,7 @@
 //    của chính account Resend đó.
 // 4. Set env vars (xem .env.example):
 //    RESEND_API_KEY="re_xxx"
-//    RESEND_FROM_EMAIL="onboarding@resend.dev"  (dev) hoặc "Ráp Kèo <noreply@rapkeo.vn>" (prod)
+//    RESEND_FROM_EMAIL="onboarding@resend.dev"  (dev) hoặc "Phủi League <noreply@rapkeo.vn>" (prod)
 //
 // Cách dùng:
 //   import { sendEmail } from "@/lib/email";
@@ -24,7 +24,7 @@ import { Resend } from "resend";
 const DEV_MODE = process.env.RESEND_DEV_MODE === "true";
 const API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL ?? "Ráp Kèo <onboarding@resend.dev>";
+  process.env.RESEND_FROM_EMAIL ?? "Phủi League <onboarding@resend.dev>";
 
 // Lazy init — chỉ tạo client khi gọi hàm (tránh crash startup nếu chưa set key
 // ở dev mode log-only). Singleton ở module scope để reuse.

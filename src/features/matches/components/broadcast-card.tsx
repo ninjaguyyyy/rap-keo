@@ -135,10 +135,10 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
         : "spotlight-opponent";
 
   return (
-    <Card className="overflow-hidden gap-0 p-0">
+    <Card className="gap-0 overflow-hidden border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
       {/* Header spotlight tone (màu theo loại kèo) + họa tiết hex.
           Trái: icon + label (venue hoặc tên user). Phải: chip giờ. */}
-      <div className={`${spotlightTone} hex-bg flex items-center justify-between gap-2 px-4 py-2.5`}>
+      <div className={`${spotlightTone} hex-bg flex items-center justify-between gap-2 px-4 py-3`}>
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white">
           <HeaderIcon className="shrink-0" />
           <span className="truncate">{headerLabel}</span>
@@ -158,13 +158,13 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
       {/* Body trắng: khu giữa hiển thị tag loại kèo nổi bật + icon.
           LOOKING_FOR_TEAM: "N cầu rảnh" + icon người (1-2 cái).
           Khác: icon (⚽/🏟️) + tag (TÌM ĐỐI/THIẾU NGƯỜI/CÓ SÂN TRỐNG). */}
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-3 p-4">
         {isLookingForTeam ? (
           <div className="flex items-center justify-center gap-2 py-1">
             <span className="text-3xl" aria-hidden="true">
               {bodyIcon(match.matchType, playersCount)}
             </span>
-            <span className="text-lg font-extrabold uppercase tracking-wide text-brand-spotlight">
+            <span className="text-lg font-extrabold uppercase tracking-wide text-brand">
               {playersCount} cầu rảnh
             </span>
           </div>
@@ -173,7 +173,7 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
             <span className="text-3xl" aria-hidden="true">
               {bodyIcon(match.matchType, playersCount)}
             </span>
-            <span className="text-lg font-extrabold uppercase tracking-wide text-brand-spotlight">
+            <span className="text-lg font-extrabold uppercase tracking-wide text-brand">
               {bodyTag(match.matchType)}
             </span>
           </div>
@@ -192,4 +192,3 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
     </Card>
   );
 }
-

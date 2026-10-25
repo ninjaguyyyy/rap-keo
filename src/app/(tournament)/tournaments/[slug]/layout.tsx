@@ -46,7 +46,7 @@ export default async function TournamentLayout({
         ) : (
           <div className="absolute inset-0 bg-brand-spotlight" />
         )}
-        {/* Scrim gradient xanh spotlight (tối dần xuống đáy) để chữ trắng đọc rõ. */}
+        {/* Scrim gradient tím spotlight (tối dần xuống đáy) để chữ trắng đọc rõ. */}
         <div className="absolute inset-0 bg-gradient-to-b from-brand-spotlight/45 via-brand-spotlight/75 to-brand-spotlight/95" />
         {/* Họa tiết lục giác mờ. */}
         <div className="hex-bg absolute inset-0" aria-hidden="true" />
@@ -98,8 +98,8 @@ export default async function TournamentLayout({
         </div>
       </header>
 
-      {/* Nội dung page: card nhô lên đè header (-mt-3 rounded-t-2xl). */}
-      <main className="relative z-10 bg-surface-muted -mt-3 rounded-t-2xl px-4 py-4">
+      {/* Nội dung page: card nhô lên đè header (-mt-4 rounded-t-3xl). */}
+      <main className="relative z-10 -mt-4 rounded-t-3xl bg-surface-muted px-4 py-4">
         <div className="mx-auto w-full max-w-md">{children}</div>
       </main>
     </div>

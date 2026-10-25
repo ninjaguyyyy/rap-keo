@@ -20,16 +20,18 @@ export function TeamCard({
   canManage: boolean;
 }) {
   return (
-    <Card className="gap-0 p-0">
+    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
       <div className="flex items-start gap-3 p-4">
         {/* Vùng avatar + tên/khu vực link sang chi tiết. */}
         <Link
           href={`/teams/${team.id}`}
-        className="flex min-w-0 flex-1 items-start gap-3"
+          className="flex min-w-0 flex-1 items-start gap-3"
         >
           <TeamAvatar name={team.name} imageUrl={team.logoUrl} size="sm" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-ink">{team.name}</p>
+            <p className="truncate text-xl leading-tight font-black tracking-[-0.01em] text-ink">
+              {team.name}
+            </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <Badge variant="secondary">
                 {teamSkillTierLabels[team.skillTier]}
@@ -39,7 +41,7 @@ export function TeamCard({
               ) : null}
             </div>
             {team.homeArea ? (
-              <p className="mt-1 inline-flex items-center gap-1 text-sm text-ink-muted">
+              <p className="mt-1 inline-flex items-center gap-1 text-[13px] leading-5 text-ink-muted">
                 <MapPinIcon />
                 {team.homeArea}
               </p>
@@ -50,7 +52,7 @@ export function TeamCard({
 
       {/* Footer action — chỉ chủ đội. */}
       {canManage ? (
-        <div className="flex justify-end gap-1.5 border-t border-line px-4 py-2.5">
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-2.5">
           <EditTeamDialog team={team} />
           <DeleteTeamButton team={team} />
         </div>

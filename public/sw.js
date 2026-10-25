@@ -10,7 +10,7 @@ self.addEventListener("push", (event) => {
   if (!event.data) return;
 
   let payload = {
-    title: "Ráp Kèo",
+    title: "Phủi League",
     body: "Bạn có thông báo mới.",
     url: "/notifications",
     icon: "/android-chrome-192x192.png",

@@ -20,7 +20,7 @@ export function MemberList({
   canManage: boolean;
 }) {
   return (
-    <Card className="gap-0 p-0">
+    <Card className="gap-0 overflow-hidden border-line/80 p-0 shadow-sm">
       <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
           Đội hình
@@ -35,7 +35,7 @@ export function MemberList({
           const jerseyText = m.jerseyNumber != null ? String(m.jerseyNumber) : "—";
           const hometownText = m.user.hometown?.trim() ?? "";
           return (
-            <li key={m.id} className="flex items-start gap-3 px-4 py-3">
+            <li key={m.id} className="flex items-start gap-3 px-4 py-2.5">
               <TeamAvatar
                 name={name}
                 imageUrl={m.user.avatarUrl}

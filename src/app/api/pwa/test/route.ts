@@ -38,7 +38,7 @@ export async function POST(request: Request) {
               },
             },
             {
-              title: parsed.data.title ?? "Ráp Kèo",
+              title: parsed.data.title ?? "Phủi League",
               body: parsed.data.body ?? "Thông báo test từ ứng dụng PWA.",
               url: parsed.data.url ?? "/notifications",
             },

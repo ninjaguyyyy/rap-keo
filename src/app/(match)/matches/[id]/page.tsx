@@ -129,6 +129,9 @@ export default async function MatchDetailPage({
         teamMembers: members.map((member) => ({
           userId: member.userId,
           name: member.user.name ?? member.user.phone ?? "—",
+          jerseyNumber: member.jerseyNumber,
+          hometown: member.user.hometown ?? null,
+          avatarUrl: member.user.avatarUrl ?? null,
         })),
         members: squadRows,
       }}

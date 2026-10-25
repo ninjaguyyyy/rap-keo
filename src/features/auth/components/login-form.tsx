@@ -64,7 +64,6 @@ export function LoginForm() {
             autoComplete="tel"
             placeholder="0912345678"
             aria-invalid={!!errors.phone}
-            className="h-12 rounded-xl text-base"
             {...register("phone")}
           />
           {errors.phone ? (
@@ -91,7 +90,6 @@ export function LoginForm() {
             autoComplete="current-password"
             placeholder="••••••••"
             aria-invalid={!!errors.password}
-            className="h-12 rounded-xl text-base"
             {...register("password")}
           />
           {errors.password ? (
@@ -108,7 +106,7 @@ export function LoginForm() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="mt-1 h-12 w-full rounded-xl text-base"
+          className="mt-1 h-11 w-full text-base"
         >
           {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
         </Button>

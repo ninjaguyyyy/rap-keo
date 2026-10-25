@@ -30,7 +30,7 @@ export default async function MatchesPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-ink">Kèo đang mở</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Kèo đang mở</h1>
           <p className="text-sm text-ink-muted">
             {matches.length} kèo sắp diễn ra
           </p>
@@ -46,7 +46,7 @@ export default async function MatchesPage({
       <MatchFilters />
 
       {matches.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
           {/* Icon clipboard/whistle tinh tế, cùng tông brand. */}
           <svg
             width="40"

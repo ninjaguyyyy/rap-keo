@@ -145,3 +145,12 @@ export const updateInternalSquadSideSchema = z.object({
   userId: z.string().uuid(),
   side: z.enum([InternalSquadSide.SIDE_A, InternalSquadSide.SIDE_B]),
 });
+
+export const swapInternalSquadSidesSchema = z.object({
+  matchId: z.string().uuid(),
+  firstUserId: z.string().uuid(),
+  secondUserId: z.string().uuid(),
+}).refine(
+  (value) => value.firstUserId !== value.secondUserId,
+  { message: "Hai cầu thủ phải khác nhau." },
+);

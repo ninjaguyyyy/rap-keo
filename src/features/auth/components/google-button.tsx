@@ -9,7 +9,7 @@ export function GoogleButton({ label = "Tiếp tục với Google" }: { label?: 
     <Button
       type="button"
       variant="outline"
-      className="h-12 w-full rounded-xl text-base font-medium"
+      className="h-11 w-full text-base"
       onClick={() => signIn("google", { callbackUrl: "/" })}
     >
       <GoogleIcon />

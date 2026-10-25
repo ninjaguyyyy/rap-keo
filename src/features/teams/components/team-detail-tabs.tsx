@@ -61,7 +61,7 @@ export function TeamDetailTabs({
   const recentMatches = matches.slice(0, 5);
 
   return (
-    <Tabs defaultValue="overview" className="gap-4">
+    <Tabs defaultValue="overview" className="gap-6">
       <TabsList>
         {TABS.map(({ id, label }) => (
           <TabsTab key={id} value={id}>
@@ -76,7 +76,7 @@ export function TeamDetailTabs({
         <PreviousGamesCard matches={recentMatches} />
 
         {/* Card thông tin đội (skill, khu vực, chủ đội) + action. */}
-        <Card className="gap-0 p-0">
+        <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
           <div className="flex flex-col gap-3 p-4">
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant="secondary">
@@ -86,13 +86,13 @@ export function TeamDetailTabs({
             </div>
 
             {team.homeArea ? (
-              <p className="inline-flex items-center gap-1 text-sm text-ink-muted">
+              <p className="inline-flex items-center gap-1 text-[13px] leading-5 text-ink-muted">
                 <MapPinIcon />
                 {team.homeArea}
               </p>
             ) : null}
 
-            <p className="text-sm text-ink-muted">
+            <p className="text-[13px] leading-5 text-ink-muted">
               Chủ đội:{" "}
               <span className="font-semibold text-ink">
                 {team.owner.name ?? "—"}
@@ -101,7 +101,7 @@ export function TeamDetailTabs({
           </div>
 
           {canManage ? (
-            <div className="flex justify-end gap-1.5 border-t border-line px-4 py-2.5">
+            <div className="flex justify-end gap-2 border-t border-line px-4 py-2.5">
               <EditTeamDialog team={team} />
               <DeleteTeamButton
                 team={team}

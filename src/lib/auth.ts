@@ -12,7 +12,7 @@ import { loginSchema } from "@/features/auth/schemas";
 import type { UserRole } from "@/generated/prisma/enums";
 
 // Field Auth.js gửi cho adapter.createUser/updateUser. Remap `image` -> `avatarUrl`
-// (cột trong schema Ráp Kèo) + bỏ `emailVerified` (schema không có). Không remap
+// (cột trong schema Phủi League) + bỏ `emailVerified` (schema không có). Không remap
 // -> Prisma error "Unknown argument `image`" lúc user.create.
 type AdapterUserInput = {
   id?: string;
@@ -23,7 +23,7 @@ type AdapterUserInput = {
 };
 
 // Field Auth.js gửi cho adapter.linkAccount. Remap snake_case -> camelCase
-// (schema Ráp Kèo dùng camelCase: access_token -> accessToken, id_token -> idToken,
+// (schema Phủi League dùng camelCase: access_token -> accessToken, id_token -> idToken,
 // expires_at -> expiresAt, token_type -> tokenType, provider_account_id ->
 // providerAccountId). Không remap -> Prisma error "Unknown argument `access_token`".
 type AdapterAccountInput = {
@@ -83,7 +83,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       }) as never;
     },
-    // Override linkAccount: remap snake_case -> camelCase cho schema Ráp Kèo.
+    // Override linkAccount: remap snake_case -> camelCase cho schema Phủi League.
     // PrismaAdapter default dùng snake_case (access_token, id_token...) — schema
     // dùng camelCase nên phải remap.
     async linkAccount(data: AdapterAccountInput) {

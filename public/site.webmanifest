@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Ráp Kèo",
-  "short_name": "Ráp Kèo",
-  "description": "Ráp kèo bóng đá phủi — tìm đối, tìm người, tìm sân.",
+  "name": "Phủi League",
+  "short_name": "Phủi League",
+  "description": "Phủi League — tìm đối, tìm người, tìm sân.",
   "start_url": "/",
   "scope": "/",
   "icons": [
@@ -25,7 +25,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#0a5c3a",
-  "background_color": "#ffffff",
+  "theme_color": "#37003c",
+  "background_color": "#f6f4f8",
   "display": "standalone"
 }

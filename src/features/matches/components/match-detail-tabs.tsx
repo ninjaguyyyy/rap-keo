@@ -52,6 +52,9 @@ type MatchSquadTabData = {
   teamMembers: {
     userId: string;
     name: string;
+    jerseyNumber: number | null;
+    hometown: string | null;
+    avatarUrl: string | null;
   }[];
   members: {
     userId: string;
@@ -59,6 +62,14 @@ type MatchSquadTabData = {
     isGuest: boolean;
     internalSide: InternalSquadSide | null;
   }[];
+};
+
+type KeyEventMetric = "goals" | "assists" | "saves";
+type KeyEventRow = {
+  metric: KeyEventMetric;
+  icon: string;
+  homeText: string | null;
+  awayText: string | null;
 };
 
 export function MatchDetailTabs({
@@ -87,6 +98,109 @@ export function MatchDetailTabs({
   const isCompleted = match.status === "COMPLETED";
   const tabValue = initialTab;
   const currentQuery = useMemo(() => searchParams.toString(), [searchParams]);
+  const memberNameByUserId = useMemo(
+    () =>
+      new Map(
+        members.map((member) => [
+          member.userId,
+          member.user.name ?? member.user.phone ?? "—",
+        ]),
+      ),
+    [members],
+  );
+  const internalSideByUserId = useMemo(
+    () =>
+      new Map(
+        squad.members.map((member) => [member.userId, member.internalSide]),
+      ),
+    [squad.members],
+  );
+  const teamMemberByUserId = useMemo(
+    () =>
+      new Map(
+        squad.teamMembers.map((member) => [member.userId, member]),
+      ),
+    [squad.teamMembers],
+  );
+  const mvpLineupCandidates = useMemo(
+    () =>
+      mvpVote.candidates.map((candidate) => {
+        const teamMember = teamMemberByUserId.get(candidate.userId);
+        return {
+          userId: candidate.userId,
+          name: candidate.name,
+          jerseyNumber: teamMember?.jerseyNumber ?? null,
+          avatarUrl: teamMember?.avatarUrl ?? null,
+          internalSide: internalSideByUserId.get(candidate.userId) ?? null,
+        };
+      }),
+    [internalSideByUserId, mvpVote.candidates, teamMemberByUserId],
+  );
+  const keyEventRows = useMemo<KeyEventRow[]>(() => {
+    const homeStats: Array<{
+      name: string;
+      goals: number;
+      assists: number;
+      saves: number;
+    }> = [];
+    const awayStats: Array<{
+      name: string;
+      goals: number;
+      assists: number;
+      saves: number;
+    }> = [];
+    for (const stat of match.playerStats) {
+      const userId = stat.userId;
+      const name = userId
+        ? (memberNameByUserId.get(userId) ?? "—")
+        : "Khách";
+      const side = squad.isInternal
+        && userId != null
+        && internalSideByUserId.get(userId) === "SIDE_B"
+        ? "away"
+        : "home";
+      const target = side === "home" ? homeStats : awayStats;
+      target.push({
+        name,
+        goals: stat.goals,
+        assists: stat.assists,
+        saves: stat.saves,
+      });
+    }
+
+    const toSummary = (list: typeof homeStats, metric: KeyEventMetric) => {
+      const lines = list
+        .filter((entry) => entry[metric] > 0)
+        .map((entry) =>
+          entry[metric] > 1
+            ? `${entry.name} ×${entry[metric]}`
+            : entry.name,
+        );
+      return lines.length > 0 ? lines.join(", ") : null;
+    };
+
+    const rows: KeyEventRow[] = [
+      {
+        metric: "goals",
+        icon: "⚽",
+        homeText: toSummary(homeStats, "goals"),
+        awayText: toSummary(awayStats, "goals"),
+      },
+      {
+        metric: "assists",
+        icon: "🅰",
+        homeText: toSummary(homeStats, "assists"),
+        awayText: toSummary(awayStats, "assists"),
+      },
+      {
+        metric: "saves",
+        icon: "🧤",
+        homeText: toSummary(homeStats, "saves"),
+        awayText: toSummary(awayStats, "saves"),
+      },
+    ];
+    return rows.filter((row) => row.homeText || row.awayText);
+  }, [internalSideByUserId, match.playerStats, memberNameByUserId, squad.isInternal]);
 
   function handleTabChange(nextTab: string) {
     const params = new URLSearchParams(currentQuery);
@@ -112,10 +226,10 @@ export function MatchDetailTabs({
 
       {/* Tổng quan: card info match. */}
       <TabsPanel value="overview" className="flex flex-col gap-4">
-        <Card className="gap-0 p-0">
+        <Card className="gap-0 overflow-hidden border border-line/80 bg-surface p-0 shadow-sm">
           <div className="flex flex-col gap-3 p-4">
             {/* Badge loại kèo + trạng thái + loại sân. */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{matchTypeLabels[match.matchType]}</Badge>
               <Badge variant="outline">{fieldTypeLabels[match.fieldType]}</Badge>
               <Badge variant="outline">{matchStatusLabels[match.status]}</Badge>
@@ -128,19 +242,19 @@ export function MatchDetailTabs({
             </p>
 
             {/* Giờ đá. */}
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-base font-bold leading-tight text-ink">
               {formatPlayTimes(match.playTimes)}
             </p>
 
             {/* Ghi chú. */}
             {match.note ? (
-              <p className="text-sm text-foreground">{match.note}</p>
+              <p className="text-[13px] leading-5 text-foreground">{match.note}</p>
             ) : null}
           </div>
 
           {/* Nút cập nhật kết quả (owner/member). */}
           {canEdit || canDelete ? (
-            <div className="flex justify-end gap-1.5 border-t border-line px-4 py-2.5">
+            <div className="flex justify-end gap-1.5 border-t border-line bg-surface-muted/35 px-4 py-2">
               {canDelete ? (
                 <DeleteMatchButton
                   matchId={match.id}
@@ -152,56 +266,49 @@ export function MatchDetailTabs({
           ) : null}
         </Card>
 
-        {/* Section thống kê cầu thủ (nếu COMPLETED + có playerStats). */}
-        {isCompleted && match.playerStats.length > 0 ? (
-          <Card className="gap-0 p-0">
-            <div className="border-b border-line px-4 py-2.5">
+        {/* Section diễn biến chính (completed + có thống kê ghi nhận). */}
+        {isCompleted && keyEventRows.length > 0 ? (
+          <Card className="gap-0 overflow-hidden border border-line/80 bg-surface p-0 shadow-sm">
+            <div className="border-b border-line px-4 py-2">
               <h2 className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-                Thống kê cầu thủ
+                Diễn biến chính
               </h2>
             </div>
             <ul className="flex flex-col divide-y divide-line">
-              {match.playerStats.map((stat) => {
-                const member = members.find((m) => m.userId === stat.userId);
-                const name = member?.user.name ?? member?.user.phone ?? "—";
-                return (
-                  <li key={stat.userId} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="flex-1 truncate text-sm font-semibold text-ink">
-                      {name}
-                    </span>
-                    {stat.goals > 0 ? (
-                      <span className="text-xs font-bold text-brand">
-                        ⚽ {stat.goals}
-                      </span>
-                    ) : null}
-                    {stat.assists > 0 ? (
-                      <span className="text-xs font-bold text-ink-muted">
-                        🅰 {stat.assists}
-                      </span>
-                    ) : null}
-                    {stat.saves > 0 ? (
-                      <span className="text-xs font-bold text-ink-muted">
-                        🧤 {stat.saves}
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
+              {keyEventRows.map((row) => (
+                <li
+                  key={row.metric}
+                  className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5"
+                >
+                  <p className="truncate text-right text-sm font-semibold text-ink">
+                    {row.homeText ?? "—"}
+                  </p>
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft text-sm">
+                    {row.icon}
+                  </span>
+                  <p className="truncate text-left text-sm font-semibold text-ink">
+                    {row.awayText ?? "—"}
+                  </p>
+                </li>
+              ))}
             </ul>
+          </Card>
+        ) : null}
+
+        {/* Fallback completed nhưng chưa ghi thống kê. */}
+        {isCompleted && keyEventRows.length === 0 ? (
+          <Card className="gap-2 border border-line/80 bg-surface p-4 shadow-sm">
+            <p className="text-sm font-semibold text-ink">Chưa có diễn biến chi tiết</p>
+            <p className="text-xs text-ink-subtle">
+              Cập nhật kết quả để hiển thị ghi bàn / kiến tạo / cứu thua theo mẫu.
+            </p>
           </Card>
         ) : null}
       </TabsPanel>
 
       <TabsPanel value="mvp">
-        {!isCompleted ? (
-          <Card className="gap-2 p-4">
-            <p className="text-sm font-semibold text-ink">Chưa mở vote MVP</p>
-            <p className="text-xs text-ink-subtle">
-              Vote MVP chỉ mở khi trận đã hoàn thành.
-            </p>
-          </Card>
-        ) : !mvpVote.hasSession ? (
-          <Card className="gap-2 p-4">
+        {!mvpVote.hasSession ? (
+          <Card className="gap-2 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-4">
             <p className="text-sm font-semibold text-ink">Chưa có phiên vote</p>
             <p className="text-xs text-ink-subtle">
               Chưa thể khởi tạo phiên vote MVP cho trận này.
@@ -220,6 +327,9 @@ export function MatchDetailTabs({
             canVoteAsLoggedMember={mvpVote.canVoteAsLoggedMember}
             allowIdentityVoteWithoutLogin={mvpVote.allowIdentityVoteWithoutLogin}
             initialVoterUserId={mvpVote.initialVoterUserId}
+            fieldType={match.fieldType}
+            isInternalMatch={squad.isInternal}
+            lineupCandidates={mvpLineupCandidates}
           />
         )}
       </TabsPanel>
@@ -228,6 +338,7 @@ export function MatchDetailTabs({
         <MatchSquadPanel
           matchId={match.id}
           isInternal={squad.isInternal}
+          fieldType={match.fieldType}
           canManage={squad.canManage}
           members={squad.members}
           teamMembers={squad.teamMembers}

@@ -11,6 +11,7 @@ type MatchVoteContext = {
   id: string;
   matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM" | "INTERNAL";
   status: "OPEN" | "MATCHED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+  playTimes: Date[];
   teamId: string | null;
   team: {
     ownerId: string;
@@ -28,6 +29,7 @@ type VoteSessionWithMatch = {
     id: string;
     matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM" | "INTERNAL";
     status: "OPEN" | "MATCHED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+    playTimes: Date[];
     teamId: string | null;
     team: {
       ownerId: string;
@@ -42,6 +44,39 @@ function hashVoteToken(token: string): string {
 
 function generateVoteToken(): string {
   return randomBytes(32).toString("base64url");
+}
+
+function resolveVoteSessionExpiry(playTimes: Date[]): Date {
+  if (playTimes.length === 0) {
+    return new Date(Date.now() + MVP_VOTE_TTL_MS);
+  }
+  const firstKickoff = [...playTimes].sort((a, b) => a.getTime() - b.getTime())[0];
+  return new Date(firstKickoff.getTime() + MVP_VOTE_TTL_MS);
+}
+
+async function syncSessionExpiryWithKickoff(session: {
+  id: string;
+  expiresAt: Date;
+  closedAt: Date | null;
+  match: { playTimes: Date[] };
+}): Promise<Date> {
+  if (session.closedAt) return session.expiresAt;
+
+  const expectedExpiresAt = resolveVoteSessionExpiry(session.match.playTimes);
+  if (expectedExpiresAt.getTime() === session.expiresAt.getTime()) {
+    return session.expiresAt;
+  }
+
+  const updated = await db.matchMvpVoteSession.update({
+    where: { id: session.id },
+    data: {
+      expiresAt: expectedExpiresAt,
+    },
+    select: {
+      expiresAt: true,
+    },
+  });
+  return updated.expiresAt;
 }
 
 function ensureMemberAccess(match: MatchVoteContext, userId: string) {
@@ -63,6 +98,7 @@ async function loadMatchVoteContext(matchId: string): Promise<MatchVoteContext |
       id: true,
       matchType: true,
       status: true,
+      playTimes: true,
       teamId: true,
       team: {
         select: {
@@ -190,7 +226,6 @@ async function closeSessionIfExpired(sessionId: string, expiresAt: Date, closedA
 export async function createOrRotateMvpVoteSession(matchId: string, userId: string) {
   const match = await loadMatchVoteContext(matchId);
   if (!match) throw new Error("MATCH_NOT_FOUND");
-  if (match.status !== "COMPLETED") throw new Error("MATCH_NOT_COMPLETED");
   ensureMemberAccess(match, userId);
 
   const existing = await db.matchMvpVoteSession.findUnique({
@@ -219,7 +254,7 @@ export async function createOrRotateMvpVoteSession(matchId: string, userId: stri
 
   const token = generateVoteToken();
   const tokenHash = hashVoteToken(token);
-  const expiresAt = new Date(Date.now() + MVP_VOTE_TTL_MS);
+  const expiresAt = resolveVoteSessionExpiry(match.playTimes);
 
   await db.matchMvpVoteSession.upsert({
     where: { matchId },
@@ -262,6 +297,7 @@ export async function getVoteSessionByToken(
           id: true,
           matchType: true,
           status: true,
+          playTimes: true,
           teamId: true,
           team: {
             select: {
@@ -277,7 +313,8 @@ export async function getVoteSessionByToken(
   });
   if (!session) return null;
 
-  await closeSessionIfExpired(session.id, session.expiresAt, session.closedAt);
+  const syncedExpiresAt = await syncSessionExpiryWithKickoff(session);
+  await closeSessionIfExpired(session.id, syncedExpiresAt, session.closedAt);
 
   return db.matchMvpVoteSession.findUnique({
     where: { id: session.id },
@@ -292,6 +329,7 @@ export async function getVoteSessionByToken(
           id: true,
           matchType: true,
           status: true,
+          playTimes: true,
           teamId: true,
           team: {
             select: {
@@ -323,6 +361,7 @@ export async function getVoteSessionByMatchId(
           id: true,
           matchType: true,
           status: true,
+          playTimes: true,
           teamId: true,
           team: {
             select: {
@@ -338,7 +377,8 @@ export async function getVoteSessionByMatchId(
   });
   if (!session) return null;
 
-  await closeSessionIfExpired(session.id, session.expiresAt, session.closedAt);
+  const syncedExpiresAt = await syncSessionExpiryWithKickoff(session);
+  await closeSessionIfExpired(session.id, syncedExpiresAt, session.closedAt);
 
   return db.matchMvpVoteSession.findUnique({
     where: { id: session.id },
@@ -353,6 +393,7 @@ export async function getVoteSessionByMatchId(
           id: true,
           matchType: true,
           status: true,
+          playTimes: true,
           teamId: true,
           team: {
             select: {
@@ -372,7 +413,7 @@ export async function getOrCreateVoteSessionByMatchId(
   matchId: string,
 ): Promise<VoteSessionWithMatch | null> {
   const match = await loadMatchVoteContext(matchId);
-  if (!match || match.status !== "COMPLETED" || !match.teamId || !match.team) {
+  if (!match || !match.teamId || !match.team) {
     return null;
   }
 
@@ -384,7 +425,7 @@ export async function getOrCreateVoteSessionByMatchId(
       data: {
         matchId,
         tokenHash: hashVoteToken(generateVoteToken()),
-        expiresAt: new Date(Date.now() + MVP_VOTE_TTL_MS),
+        expiresAt: resolveVoteSessionExpiry(match.playTimes),
         createdByUserId: match.team.ownerId,
       },
     });
@@ -482,7 +523,6 @@ export async function submitVote(params: {
       : await getVoteSessionByMatchId(params.matchId);
   if (!session) throw new Error("INVALID_TOKEN");
   if (session.closedAt) throw new Error("SESSION_CLOSED");
-  if (session.match.status !== "COMPLETED") throw new Error("MATCH_NOT_COMPLETED");
   if (!session.match.teamId || !session.match.team) throw new Error("MATCH_TEAM_REQUIRED");
 
   const squadMembers = await db.matchSquadMember.findMany({
@@ -536,7 +576,6 @@ export async function submitVote(params: {
 export async function closeMvpVoteSession(matchId: string, userId: string) {
   const match = await loadMatchVoteContext(matchId);
   if (!match) throw new Error("MATCH_NOT_FOUND");
-  if (match.status !== "COMPLETED") throw new Error("MATCH_NOT_COMPLETED");
   const { isOwner } = ensureMemberAccess(match, userId);
   if (!isOwner) throw new Error("FORBIDDEN_OWNER_ONLY");
 

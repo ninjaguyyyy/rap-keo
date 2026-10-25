@@ -49,7 +49,7 @@ function mapVoteError(error: unknown): string {
     case "MATCH_NOT_FOUND":
       return "Trận không tồn tại.";
     case "MATCH_NOT_COMPLETED":
-      return "Chỉ vote MVP cho trận đã hoàn thành.";
+      return "Trận này chưa sẵn sàng để vote MVP.";
     case "MATCH_TEAM_REQUIRED":
       return "Trận này chưa gắn đội để vote MVP.";
     case "FORBIDDEN_MEMBER":

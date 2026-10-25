@@ -10,7 +10,7 @@ export function forgotPasswordOtpHtml(args: {
   requestedAt: Date;
   appName?: string;
 }): string {
-  const { phone, otp, requestedAt, appName = "Ráp Kèo" } = args;
+  const { phone, otp, requestedAt, appName = "Phủi League" } = args;
   const time = requestedAt.toLocaleString("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
   });

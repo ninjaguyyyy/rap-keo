@@ -78,12 +78,17 @@ export function MyMatchCard({ match }: { match: MyMatchItem }) {
         : StadiumIcon;
 
   return (
-    <Card className={cn("gap-0 overflow-hidden p-0", hasRequests && "ring-1 ring-type-field/30")}>
+    <Card
+      className={cn(
+        "gap-0 overflow-hidden border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0",
+        hasRequests && "ring-1 ring-type-field/30",
+      )}
+    >
       {/* Header spotlight + chip giờ / badge số đội hỏi. */}
       <div
         className={cn(
           spotlightToneFor(match.matchType),
-          "hex-bg flex items-center justify-between gap-2 px-4 py-2.5",
+          "hex-bg flex items-center justify-between gap-2 px-4 py-3",
         )}
       >
         <span className="inline-flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">

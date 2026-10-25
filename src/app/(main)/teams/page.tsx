@@ -18,8 +18,10 @@ export default async function TeamsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-ink">Đội của tôi</h1>
-          <p className="text-sm text-ink-muted">
+          <h1 className="text-[1.875rem] leading-[1.05] font-black tracking-[-0.02em] text-ink">
+            Đội của tôi
+          </h1>
+          <p className="mt-1 text-[13px] leading-5 text-ink-muted">
             {teams.length > 0 ? `${teams.length} đội` : "Chưa có đội nào"}
           </p>
         </div>
@@ -27,7 +29,7 @@ export default async function TeamsPage() {
       </div>
 
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
           <svg
             width="40"
             height="40"

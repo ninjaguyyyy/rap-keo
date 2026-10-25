@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-ink">Thông báo</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Thông báo</h1>
           <p className="text-sm text-ink-muted">
             {items.length > 0
               ? `${items.length} thông báo gần đây`
@@ -35,13 +35,13 @@ export default async function NotificationsPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-12 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-12 text-center">
           <p className="text-sm text-ink-muted">
             Chưa có thông báo nào. Khi có hoạt động ráp kèo, bạn sẽ thấy ở đây.
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line/80 bg-linear-to-b from-surface to-surface-muted/40">
           {items.map((item) => {
             const Icon = item.icon;
             const content = (
@@ -83,7 +83,7 @@ export default async function NotificationsPage() {
                 {item.href ? (
                   <Link
                     href={item.href}
-                    className="block transition hover:bg-muted"
+                    className="block transition hover:bg-muted/70"
                   >
                     {content}
                   </Link>

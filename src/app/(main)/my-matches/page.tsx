@@ -17,7 +17,7 @@ export default async function MyMatchesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="min-w-0">
-        <h1 className="text-xl font-bold text-ink">Kèo của tôi</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Kèo của tôi</h1>
         <p className="text-sm text-ink-muted">
           {openCount > 0
             ? `${openCount} kèo đang hiển thị trên bảng`
@@ -26,7 +26,7 @@ export default async function MyMatchesPage() {
       </div>
 
       {matches.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
           <svg
             width="40"
             height="40"

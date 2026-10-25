@@ -23,8 +23,10 @@ export default async function TournamentsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-ink">Giải đấu</h1>
-          <p className="text-sm text-ink-muted">
+          <h1 className="text-[1.875rem] leading-[1.05] font-black tracking-[-0.02em] text-ink">
+            Giải đấu
+          </h1>
+          <p className="mt-1 text-[13px] leading-5 text-ink-muted">
             {approved.length > 0
               ? `${approved.length} giải đang diễn ra / đã kết thúc`
               : "Chưa có giải nào công khai"}
@@ -35,8 +37,8 @@ export default async function TournamentsPage() {
 
       {/* Section ADMIN: giải chờ duyệt. */}
       {isAdmin && pending.length > 0 ? (
-        <section className="flex flex-col gap-3 rounded-xl border border-accent-yellow/40 bg-accent-yellow/10 p-3">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-ink">
+        <section className="flex flex-col gap-3 rounded-2xl border border-accent-yellow/40 bg-linear-to-b from-accent-yellow/10 to-surface p-3">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink">
             Chờ duyệt ({pending.length})
           </h2>
           <ul className="flex flex-col gap-3">
@@ -50,7 +52,7 @@ export default async function TournamentsPage() {
       ) : null}
 
       {approved.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line bg-linear-to-b from-surface to-surface-muted px-4 py-10 text-center">
           <svg
             width="40"
             height="40"
