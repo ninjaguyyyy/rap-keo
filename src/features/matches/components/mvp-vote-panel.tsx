@@ -115,7 +115,8 @@ export function MvpVotePanel({
     initialCloseState,
   );
   const [voteThanksDismissed, setVoteThanksDismissed] = useState(false);
-  const showVoteThanksDialog = submitState.ok === true && !voteThanksDismissed;
+  const hasSubmittedVote = submitState.ok === true;
+  const showVoteThanksDialog = hasSubmittedVote && !voteThanksDismissed;
 
   useEffect(() => {
     if (!closeState.ok) return;
@@ -177,8 +178,11 @@ export function MvpVotePanel({
     () => new Map(identityVoterCandidates.map((candidate) => [candidate.userId, candidate])),
     [identityVoterCandidates],
   );
-  const activeSelectedVoterUserId = isIdentityVoteMode && selectedVoterUserId
-    && !identityVoterByUserId.has(selectedVoterUserId)
+  const activeSelectedCandidateId = hasSubmittedVote ? "" : selectedCandidateId;
+  const hasInvalidIdentitySelection = isIdentityVoteMode
+    && selectedVoterUserId.length > 0
+    && !identityVoterByUserId.has(selectedVoterUserId);
+  const activeSelectedVoterUserId = hasSubmittedVote || hasInvalidIdentitySelection
     ? ""
     : selectedVoterUserId;
   const normalizedLineupCandidates = useMemo(
@@ -233,7 +237,7 @@ export function MvpVotePanel({
   const canVote = !isClosed && (canVoteAsLoggedMember || isIdentityVoteMode);
   const canSubmitVote =
     hasCandidates
-    && Boolean(selectedCandidateId)
+    && Boolean(activeSelectedCandidateId)
     && (canVoteAsLoggedMember || (isIdentityVoteMode && Boolean(activeSelectedVoterUserId)));
   const selectedVoterLabel = activeSelectedVoterUserId
     ? (identityVoterByUserId.get(activeSelectedVoterUserId)?.name ?? "")
@@ -303,7 +307,7 @@ export function MvpVotePanel({
               bottomFormation={isInternalMatch ? bottomFormation : undefined}
               bottomPlayers={isInternalMatch ? bottomStarterPlayers : undefined}
               bottomBenchPlayers={isInternalMatch ? bottomBenchPlayers : undefined}
-              selectedCandidateId={selectedCandidateId}
+              selectedCandidateId={activeSelectedCandidateId}
               voteCountsByCandidate={countsByCandidate}
               showVoteCounts={isOwner}
               clickable={canVote}
@@ -316,7 +320,7 @@ export function MvpVotePanel({
             <form action={submitAction} className="flex flex-col gap-3">
               <input type="hidden" name="matchId" value={matchId} />
               <input type="hidden" name="voterUserId" value={activeSelectedVoterUserId} />
-              <input type="hidden" name="candidateUserId" value={selectedCandidateId} />
+              <input type="hidden" name="candidateUserId" value={activeSelectedCandidateId} />
 
               {isIdentityVoteMode ? (
                 <div className="flex flex-col gap-1.5">
@@ -349,15 +353,15 @@ export function MvpVotePanel({
                   )}
                 </div>
               ) : null}
-              {selectedCandidateId ? (
+              {activeSelectedCandidateId && !hasSubmittedVote ? (
                 <p className="text-sm text-ink-muted">
                   Đang chọn:{" "}
                   <span className="font-semibold text-ink">
-                    {candidateByUserId.get(selectedCandidateId)?.name ?? "—"}
+                    {candidateByUserId.get(activeSelectedCandidateId)?.name ?? "—"}
                   </span>
                 </p>
               ) : null}
-              {initialCandidateUserId ? (
+              {initialCandidateUserId && !hasSubmittedVote ? (
                 <p className="text-xs text-ink-subtle">
                   Phiếu trước đó: {candidateByUserId.get(initialCandidateUserId)?.name ?? "—"}
                 </p>
@@ -367,7 +371,7 @@ export function MvpVotePanel({
                 {submitPending ? "Đang lưu..." : "Gửi vote MVP"}
               </Button>
 
-              {submitState.ok ? (
+              {hasSubmittedVote ? (
                 <p className="text-sm text-brand">
                   Đã lưu vote MVP của bạn.
                 </p>

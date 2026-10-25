@@ -86,9 +86,9 @@ export default async function MatchLayout({
                 className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_14%,rgba(255,255,255,0.16),transparent_34%),radial-gradient(circle_at_84%_86%,rgba(255,255,255,0.12),transparent_36%)]"
               />
 
-              <div className="absolute left-1/2 top-1/2 flex min-w-40 -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-[1.75rem] bg-white px-5 py-3 shadow-[0_8px_24px_rgba(36,0,40,0.24)] ring-1 ring-line/40">
+              <div className="absolute left-1/2 top-1/2 flex min-w-32 -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-[1.5rem] bg-white px-4 py-2.5 shadow-[0_8px_24px_rgba(36,0,40,0.24)] ring-1 ring-line/40">
                 <ScoreOrVs home={homeScore} away={awayScore} hasScore={hasScore} />
-                <p className="mt-1 text-xs font-semibold tracking-wide text-ink-muted">
+                <p className="mt-0.5 text-[11px] font-semibold tracking-wide text-ink-muted">
                   {scoreMetaLabel}
                 </p>
               </div>
@@ -146,13 +146,13 @@ function ScoreOrVs({
 }) {
   if (!hasScore) {
     return (
-      <span className="shrink-0 px-1 font-heading text-3xl font-black tracking-[0.05em] text-ink">
+      <span className="shrink-0 px-1 font-heading text-[2.4rem] leading-none font-black tracking-[0.05em] text-ink">
         VS
       </span>
     );
   }
   return (
-    <span className="shrink-0 px-1 font-mono text-[2.8rem] leading-none font-black tabular-nums text-ink">
+    <span className="shrink-0 px-1 font-mono text-[2.4rem] leading-none font-black tabular-nums text-ink">
       {home}
       <span className="mx-1 text-ink-subtle">-</span>
       {away}
