@@ -661,14 +661,14 @@ function LineupPreviewCard({
         </div>
       ) : null}
 
-      <div className="relative h-[512px] overflow-hidden bg-gradient-to-b from-brand-soft/10 to-surface">
+      <div className="relative h-[460px] overflow-hidden bg-gradient-to-b from-brand-soft/10 to-surface sm:h-[512px]">
         <div className="absolute inset-x-3 inset-y-3 rounded-xl border border-line/70" />
         <div className="absolute inset-x-3 top-1/2 border-t border-line/70" />
         <div className="absolute top-1/2 left-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line/60" />
         <div className="absolute top-3 left-1/2 h-8 w-28 -translate-x-1/2 border border-line/60 border-t-0" />
         <div className="absolute bottom-3 left-1/2 h-8 w-28 -translate-x-1/2 border border-line/60 border-b-0" />
 
-        <div className={cn("absolute inset-x-5", hasBottom ? "top-8 h-[22%]" : "top-10 h-[84%]")}>
+        <div className={cn("absolute inset-x-5", hasBottom ? "top-7 h-[22%] sm:top-8" : "top-9 h-[84%] sm:top-10")}>
           <LineupRows
             rows={topRows}
             side="top"
@@ -683,7 +683,7 @@ function LineupPreviewCard({
         </div>
 
         {hasBottom ? (
-          <div className="absolute inset-x-5 bottom-[6.75rem] h-[22%]">
+          <div className="absolute inset-x-5 bottom-[5.75rem] h-[22%] sm:bottom-[6.75rem]">
             <LineupRows
               rows={bottomRows}
               side="bottom"
@@ -776,12 +776,12 @@ function LineupRows({
   const displayRows = reverse ? [...rows].reverse() : rows;
 
   return (
-    <div className="flex h-full flex-col justify-evenly gap-2">
+    <div className="flex h-full flex-col justify-evenly gap-1.5 sm:gap-2">
       {displayRows.map((row, index) => (
         <div
           key={`${index}-${row.map((slot) => slot.player?.userId ?? `empty-${slot.starterSlotIndex}`).join("-")}`}
           className={cn(
-            "flex w-full items-start justify-evenly gap-4",
+            "flex w-full items-start justify-evenly gap-3 sm:gap-4",
             !reverse && displayRows.length >= 3 && index === displayRows.length - 1
               ? "mt-3"
               : undefined,
@@ -827,7 +827,7 @@ function LineupRows({
                   event.preventDefault();
                   onDropOnSlot(side, slot.index, slot.starterSlotIndex, true);
                 }}
-                className="flex h-[62px] w-[74px] items-center justify-center rounded-xl border border-dashed border-line bg-surface/75 text-[10px] font-semibold text-ink-subtle"
+                className="flex h-[56px] w-[68px] items-center justify-center rounded-xl border border-dashed border-line bg-surface/75 text-[9px] font-semibold text-ink-subtle sm:h-[62px] sm:w-[74px] sm:text-[10px]"
               >
                 Vị trí trống
               </div>
@@ -841,14 +841,14 @@ function LineupRows({
 
 function LineupPlayerChip({ player }: { player: LineupPlayer }) {
   return (
-    <div className="flex w-[74px] flex-col items-center gap-1 text-center">
+    <div className="flex w-[68px] flex-col items-center gap-0.5 text-center sm:w-[74px] sm:gap-1">
       <TeamAvatar
         name={player.name}
         imageUrl={player.avatarUrl}
         size="lg"
-        className="h-10 w-10 rounded-xl text-sm"
+        className="h-9 w-9 rounded-xl text-sm sm:h-10 sm:w-10"
       />
-      <p className="w-full truncate text-[11px] leading-4 font-semibold text-ink">
+      <p className="w-full truncate text-[10px] leading-[14px] font-semibold text-ink sm:text-[11px] sm:leading-4">
         {player.jerseyNumber != null ? `${player.jerseyNumber} ` : ""}
         {player.name}
       </p>

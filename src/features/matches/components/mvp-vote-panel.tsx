@@ -487,14 +487,14 @@ function MvpLineupBoard({
         </div>
       ) : null}
 
-      <div className="relative h-[624px] overflow-hidden bg-gradient-to-b from-brand-soft/10 to-surface">
+      <div className="relative h-[560px] overflow-hidden bg-gradient-to-b from-brand-soft/10 to-surface sm:h-[624px]">
         <div className="absolute inset-x-3 inset-y-3 rounded-xl border border-line/70" />
         <div className="absolute inset-x-3 top-1/2 border-t border-line/70" />
         <div className="absolute top-1/2 left-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line/60" />
         <div className="absolute top-3 left-1/2 h-8 w-28 -translate-x-1/2 border border-line/60 border-t-0" />
         <div className="absolute bottom-3 left-1/2 h-8 w-28 -translate-x-1/2 border border-line/60 border-b-0" />
 
-        <div className={cn("absolute inset-x-5", hasBottom ? "top-8 h-[22%]" : "top-10 h-[84%]")}>
+        <div className={cn("absolute inset-x-5", hasBottom ? "top-7 h-[22%] sm:top-8" : "top-9 h-[84%] sm:top-10")}>
           <MvpLineupRows
             rows={topRows}
             selectedCandidateId={selectedCandidateId}
@@ -506,7 +506,7 @@ function MvpLineupBoard({
         </div>
 
         {hasBottom ? (
-          <div className="absolute inset-x-5 bottom-[9rem] h-[22%]">
+          <div className="absolute inset-x-5 bottom-[7.5rem] h-[22%] sm:bottom-[9rem]">
             <MvpLineupRows
               rows={bottomRows}
               reverse
@@ -577,12 +577,12 @@ function MvpLineupRows({
   const displayRows = reverse ? [...rows].reverse() : rows;
 
   return (
-    <div className="flex h-full flex-col justify-evenly gap-2">
+    <div className="flex h-full flex-col justify-evenly gap-1.5 sm:gap-2">
       {displayRows.map((row, index) => (
         <div
           key={`${index}-${row.map((player) => player.userId).join("-")}`}
           className={cn(
-            "flex w-full items-start justify-evenly gap-4",
+            "flex w-full items-start justify-evenly gap-3 sm:gap-4",
             !reverse && displayRows.length >= 3 && index === displayRows.length - 1
               ? "mt-3"
               : undefined,
@@ -629,7 +629,7 @@ function MvpLineupPlayerButton({
       disabled={!clickable}
       onClick={() => onSelect(player.userId)}
       className={cn(
-        "group flex w-[74px] flex-col items-center gap-1 rounded-md p-0.5 text-center transition-colors",
+        "group flex w-[68px] flex-col items-center gap-0.5 rounded-md p-0.5 text-center transition-colors sm:w-[74px] sm:gap-1",
         clickable ? "cursor-pointer hover:bg-surface-muted/70" : "cursor-default",
         selected ? "bg-brand-soft/70 ring-1 ring-brand/50" : undefined,
       )}
@@ -638,9 +638,9 @@ function MvpLineupPlayerButton({
         name={player.name}
         imageUrl={player.avatarUrl}
         size="lg"
-        className="h-10 w-10 rounded-xl text-sm"
+        className="h-9 w-9 rounded-xl text-sm sm:h-10 sm:w-10"
       />
-      <p className="w-full truncate text-[11px] leading-4 font-semibold text-ink">
+      <p className="w-full truncate text-[10px] leading-[14px] font-semibold text-ink sm:text-[11px] sm:leading-4">
         {player.jerseyNumber != null ? `${player.jerseyNumber} ` : ""}
         {player.name}
       </p>
