@@ -29,7 +29,11 @@ function formatKickoffLabel(value: string): string {
 }
 
 function formatSkillLabel(value: string): string {
-  return value === "Trung Bình Yếu" ? "TB Yếu" : value;
+  if (value === "Mọi trình độ") return "ALL";
+  if (value === "Trung bình") return "TB";
+  if (value === "Trung Bình Khá" || value === "TB Khá" || value === "TB khá") return "TBK";
+  if (value === "Trung Bình Yếu" || value === "TB Yếu" || value === "TB yếu") return "TBY";
+  return value;
 }
 
 function TeamNameWithLogo({
@@ -134,7 +138,7 @@ export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListPr
                             </span>
                             <Link
                               href={`/matches/mock/${match.id}`}
-                              className="inline-flex h-7 items-center rounded-[8px] border border-brand/25 bg-white px-2.5 text-xs font-semibold text-brand"
+                              className="inline-flex h-7 items-center rounded-[8px] bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-hover"
                             >
                               Nhận kèo
                             </Link>
