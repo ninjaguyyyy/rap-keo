@@ -31,8 +31,9 @@ import { AreaCombobox } from "./area-combobox";
 // TimeSlot = keyof TIME_SLOT_RANGES (queries.ts) — nhưng queries.ts là server-only,
 // nên định nghĩa type client-side khớp tuple (value là key cho URL/hidden input).
 type TimeSlot =
-  | "0500" | "0530" | "0600" | "0630"
-  | "1630" | "1730" | "1830" | "1930" | "2030" | "2130";
+  | "1500" | "1530" | "1600" | "1630" | "1700" | "1730"
+  | "1800" | "1830" | "1900" | "1930" | "2000" | "2030"
+  | "2100" | "2130" | "2200" | "2230" | "2300" | "2330";
 
 const initialState: CreateMatchState = {};
 
@@ -55,16 +56,24 @@ const TIME_SLOTS = Object.entries(timeSlotLabels) as [TimeSlot, string][];
 // Range giờ bắt đầu của mỗi slot (key -> "HH:mm"). Định nghĩa client-side để
 // không phải import queries.ts (file server-only) vào client component.
 const TIME_SLOT_START: Record<TimeSlot, string> = {
-  "0500": "05:00",
-  "0530": "05:30",
-  "0600": "06:00",
-  "0630": "06:30",
+  "1500": "15:00",
+  "1530": "15:30",
+  "1600": "16:00",
   "1630": "16:30",
+  "1700": "17:00",
   "1730": "17:30",
+  "1800": "18:00",
   "1830": "18:30",
+  "1900": "19:00",
   "1930": "19:30",
+  "2000": "20:00",
   "2030": "20:30",
+  "2100": "21:00",
   "2130": "21:30",
+  "2200": "22:00",
+  "2230": "22:30",
+  "2300": "23:00",
+  "2330": "23:30",
 };
 
 export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => void; isAdmin?: boolean }) {

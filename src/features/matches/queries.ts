@@ -8,19 +8,27 @@ import {
   MatchType,
 } from "@/generated/prisma/enums";
 
-// Khung giờ đá: mỗi slot là một cửa sổ thời gian trong ngày (giờ Việt Nam).
-// Sáng tách thành các slot 30 phút (05:00–07:00); tối là cửa sổ 1 tiếng [HH:30, (HH+1):30).
+// Khung giờ đá: mỗi slot là một cửa sổ 30 phút trong ngày (giờ Việt Nam).
+// Mock hiện dùng dải 15:00–23:30, mỗi nấc 30 phút.
 export const TIME_SLOT_RANGES: Record<string, { start: string; end: string }> = {
-  "0500": { start: "05:00", end: "05:30" },
-  "0530": { start: "05:30", end: "06:00" },
-  "0600": { start: "06:00", end: "06:30" },
-  "0630": { start: "06:30", end: "07:00" },
-  "1630": { start: "16:30", end: "17:30" },
-  "1730": { start: "17:30", end: "18:30" },
-  "1830": { start: "18:30", end: "19:30" },
-  "1930": { start: "19:30", end: "20:30" },
-  "2030": { start: "20:30", end: "21:30" },
-  "2130": { start: "21:30", end: "22:30" },
+  "1500": { start: "15:00", end: "15:30" },
+  "1530": { start: "15:30", end: "16:00" },
+  "1600": { start: "16:00", end: "16:30" },
+  "1630": { start: "16:30", end: "17:00" },
+  "1700": { start: "17:00", end: "17:30" },
+  "1730": { start: "17:30", end: "18:00" },
+  "1800": { start: "18:00", end: "18:30" },
+  "1830": { start: "18:30", end: "19:00" },
+  "1900": { start: "19:00", end: "19:30" },
+  "1930": { start: "19:30", end: "20:00" },
+  "2000": { start: "20:00", end: "20:30" },
+  "2030": { start: "20:30", end: "21:00" },
+  "2100": { start: "21:00", end: "21:30" },
+  "2130": { start: "21:30", end: "22:00" },
+  "2200": { start: "22:00", end: "22:30" },
+  "2230": { start: "22:30", end: "23:00" },
+  "2300": { start: "23:00", end: "23:30" },
+  "2330": { start: "23:30", end: "24:00" },
 };
 
 export type TimeSlot = keyof typeof TIME_SLOT_RANGES;

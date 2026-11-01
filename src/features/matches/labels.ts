@@ -33,16 +33,24 @@ export const skillTierLabels: Record<MatchSkillTier, string> = {
 
 // Nhãn khung giờ (khớp key của TIME_SLOT_RANGES trong queries.ts).
 export const timeSlotLabels: Record<string, string> = {
-  "0500": "05h00",
-  "0530": "05h30",
-  "0600": "06h00",
-  "0630": "06h30",
+  "1500": "15h00",
+  "1530": "15h30",
+  "1600": "16h00",
   "1630": "16h30",
+  "1700": "17h00",
   "1730": "17h30",
+  "1800": "18h00",
   "1830": "18h30",
+  "1900": "19h00",
   "1930": "19h30",
+  "2000": "20h00",
   "2030": "20h30",
+  "2100": "21h00",
   "2130": "21h30",
+  "2200": "22h00",
+  "2230": "22h30",
+  "2300": "23h00",
+  "2330": "23h30",
 };
 
 // Sân (MVP: cố định 4 sân phổ biến. Map + field picker để task sau).
