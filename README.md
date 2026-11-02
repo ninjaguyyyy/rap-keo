@@ -87,4 +87,5 @@ Notes:
 
 - API tự gán `creator_id` là user ADMIN đầu tiên theo `created_at` (ascending).
 - API is idempotent by `(source_platform=FACEBOOK, source_external_id)`.
+- `phone` (optional) được normalize canonical trước khi lưu `matches.source_phone` (fallback parse từ `rawText`).
 - Team name fallback order: `normalized.teamName` -> extract from `rawText` -> `posterName`.

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import {
@@ -9,11 +10,26 @@ import {
 } from "@/features/matches/queries";
 import { listTeamMembers } from "@/features/teams/queries";
 import { MatchDetailTabs } from "@/features/matches/components/match-detail-tabs";
+import { MockMatchFlowActions } from "@/features/matches/components/mock-match-flow-actions";
 import {
   getSessionResultSummary,
   getOrCreateVoteSessionByMatchId,
   getUserVote,
 } from "@/features/matches/mvp-vote";
+import { fieldTypeLabels, skillTierLabels } from "@/features/matches/labels";
+
+const dayLabelFormatter = new Intl.DateTimeFormat("vi-VN", {
+  weekday: "long",
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
+function formatLegacyDayLabel(playTimes: Date[]): string {
+  if (playTimes.length === 0) return "";
+  const first = [...playTimes].sort((a, b) => a.getTime() - b.getTime())[0];
+  return dayLabelFormatter.format(first);
+}
 
 // Trang chi tiết trận /matches/[id]. Header (2 đội + tỷ số) render ở layout;
 // page chỉ render nội dung = tabs. Quyền xem đã enforce ở layout (getMatchById
@@ -45,6 +61,47 @@ export default async function MatchDetailPage({
     ?? (await getMatchByIdForVoteLink(id));
   if (!match) {
     notFound();
+  }
+
+  // Public match detail dùng UI cũ (flow gọi/inbox + chốt kèo) để giữ trải nghiệm
+  // giống trước khi bỏ mock data. Private/team match giữ tabs quản lý.
+  if (!match.isPrivate) {
+    const dayLabel = formatLegacyDayLabel(match.playTimes);
+    const areaLabel = match.field?.name ?? match.area ?? "Chưa rõ khu vực";
+    const firstSkillTier = match.skillTiers[0];
+    const skillLabel = firstSkillTier ? skillTierLabels[firstSkillTier] : "Mọi trình độ";
+
+    return (
+      <div className="space-y-3 p-4">
+        <MockMatchFlowActions
+          matchId={match.id}
+          phone={match.sourcePhone ?? ""}
+          fbLink={match.sourcePostUrl ?? ""}
+        />
+
+        <div className="space-y-1.5 px-1 text-center text-ink-muted">
+          <p className="text-[12px] font-normal tracking-[0.56px]">
+            <span>Phủi League</span>
+            {dayLabel ? <span className="mx-2.5">•</span> : null}
+            {dayLabel ? <span>{dayLabel}</span> : null}
+          </p>
+          <p className="text-[12px]">
+            <span>{fieldTypeLabels[match.fieldType]}</span>
+            <span className="mx-2">•</span>
+            <span>{areaLabel}</span>
+            <span className="mx-2">•</span>
+            <span>{skillLabel}</span>
+          </p>
+        </div>
+
+        <Link
+          href="/matches"
+          className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#ebe5eb] text-xs font-medium text-brand"
+        >
+          Về danh sách kèo
+        </Link>
+      </div>
+    );
   }
 
   // Members + canEdit: chỉ load khi match có teamId (public kèo không có team thì

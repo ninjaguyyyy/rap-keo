@@ -48,6 +48,13 @@ export const facebookIngestItemSchema = z.object({
   postedAt: isoDateTimeSchema.optional(),
   scrapedAt: isoDateTimeSchema.optional(),
   posterName: z.string().trim().min(1).max(120),
+  phone: z
+    .string()
+    .trim()
+    .min(6)
+    .max(32)
+    .optional()
+    .transform((value) => (value ? normalizePhone(value) : undefined)),
   rawText: z.string().trim().min(1).max(10000),
   normalized: normalizedPayloadSchema,
   confidence: z.number().min(0).max(1).optional(),
@@ -64,6 +71,19 @@ const TEAM_NAME_STOP_WORDS_REGEX =
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizePhone(value: string): string {
+  const compact = value.trim().replace(/[\s().-]/g, "");
+  if (compact.startsWith("00")) {
+    const digits = compact.slice(2).replace(/\D/g, "");
+    return `+${digits}`.slice(0, 32);
+  }
+  if (compact.startsWith("+")) {
+    const digits = compact.slice(1).replace(/\D/g, "");
+    return `+${digits}`.slice(0, 32);
+  }
+  return compact.replace(/\D/g, "").slice(0, 32);
 }
 
 function cleanupTeamNameCandidate(value: string): string | null {
@@ -86,6 +106,21 @@ function cleanupTeamNameCandidate(value: string): string | null {
 function sanitizePosterName(value: string): string {
   const cleaned = normalizeWhitespace(value).slice(0, 120).trim();
   return cleaned || "Người đăng bài";
+}
+
+function isLikelyPhone(value: string): boolean {
+  const digitsOnly = value.replace(/\D/g, "");
+  return digitsOnly.length >= 9 && digitsOnly.length <= 12;
+}
+
+function extractPhoneFromRawText(rawText: string): string | undefined {
+  const candidates = rawText.match(/(?:\+?84|0)\d(?:[\s.\-]?\d){8,10}/g);
+  if (!candidates || candidates.length === 0) return undefined;
+  for (const candidate of candidates) {
+    const normalized = normalizePhone(candidate);
+    if (isLikelyPhone(normalized)) return normalized;
+  }
+  return undefined;
 }
 
 function extractTeamNameFromRawText(rawText: string): string | null {
@@ -143,4 +178,12 @@ export function resolveSourceTeamName(input: {
     teamName: sanitizePosterName(input.posterName),
     source: SourceTeamNameSource.POSTER_NAME,
   };
+}
+
+export function resolveSourcePhone(input: {
+  phone?: string;
+  rawText: string;
+}): string | undefined {
+  if (input.phone && isLikelyPhone(input.phone)) return input.phone;
+  return extractPhoneFromRawText(input.rawText);
 }

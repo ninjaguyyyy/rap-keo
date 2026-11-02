@@ -64,6 +64,7 @@
 - source_external_id (string, nullable)      -- id bài nguồn (idempotency)
 - source_post_url (string, nullable)
 - source_poster_name (string, nullable)
+- source_phone (string, nullable)            -- SĐT liên hệ crawl từ payload/raw text
 - source_team_name (string, nullable)        -- tên đội resolve từ normalized/raw/poster
 - source_team_name_source (enum, nullable: NORMALIZED, RAW_TEXT, POSTER_NAME)
 - source_posted_at (timestamp, nullable)

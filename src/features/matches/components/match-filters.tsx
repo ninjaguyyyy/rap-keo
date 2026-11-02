@@ -122,6 +122,22 @@ type DayOption = {
   count: number;
 };
 
+const vnDateKeyFormatter = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
+function getVnDateKey(date: Date): string {
+  const parts = vnDateKeyFormatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
+}
+
 export function MatchFilters({
   dayOptions,
   selectedDayKey,
@@ -178,10 +194,15 @@ export function MatchFilters({
     dayOptions.findIndex((day) => day.key === selectedDayKey),
   );
   const selectedDay = dayOptions[selectedDayIndex] ?? dayOptions[0];
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const todayKey = getVnDateKey(today);
+  const tomorrowKey = getVnDateKey(tomorrow);
   let dayStateLabel = "Sắp tới";
-  if (selectedDayIndex === 0) {
+  if (selectedDay?.key === todayKey) {
     dayStateLabel = "Hôm nay";
-  } else if (selectedDayIndex === 1) {
+  } else if (selectedDay?.key === tomorrowKey) {
     dayStateLabel = "Ngày mai";
   }
 

@@ -1,4 +1,5 @@
 // Phần dùng chung cho các biến thể MatchCard.
+import Link from "next/link";
 import type { MatchListItem } from "../queries";
 import {
   areaLabels,
@@ -151,9 +152,8 @@ export function CardFooter({ match }: MatchCardProps) {
       <p className="text-xs text-muted-foreground">
         {match.team?.name ?? match.creator.name ?? "Người dùng ẩn danh"}
       </p>
-      {/* TODO: link tới /matches/[id] khi build route chi tiết. */}
-      <a
-        href="#"
+      <Link
+        href={`/matches/${match.id}`}
         className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover hover:underline"
       >
         Xem chi tiết
@@ -170,8 +170,7 @@ export function CardFooter({ match }: MatchCardProps) {
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-      </a>
+      </Link>
     </div>
   );
 }
-

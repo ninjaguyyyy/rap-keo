@@ -35,6 +35,7 @@ Required server env vars:
       "postedAt": "2026-11-02T08:00:00Z",
       "scrapedAt": "2026-11-02T10:00:00Z",
       "posterName": "Nguyen Van A",
+      "phone": "0905123456",
       "rawText": "CLB FC Go Vap can tim keo san 7 luc 19h30...",
       "normalized": {
         "teamName": "FC Go Vap",
@@ -59,6 +60,7 @@ Required server env vars:
   - `externalId`: required, max length `191`.
   - `postUrl`: required valid URL.
   - `posterName`: required, max length `120`.
+  - `phone`: optional, min length `6`, max length `32`.
   - `rawText`: required, max length `10000`.
   - `normalized` is required with:
     - `matchType`: one of `FIND_OPPONENT | NEED_PLAYERS | FIELD_AVAILABLE | LOOKING_FOR_TEAM`
@@ -84,6 +86,15 @@ Stored fields:
   - `RAW_TEXT`
   - `POSTER_NAME`
 
+## Phone Resolution
+
+The server resolves phone in this order:
+
+1. `phone` from payload (normalize canonical: bỏ khoảng trắng/ký tự phân tách, giữ số; `00` -> `+`)
+2. Extract from `rawText` (Vietnamese phone patterns)
+
+If no valid phone is found, `source_phone` is stored as `null`.
+
 ## Idempotency & Duplicate Behavior
 
 Idempotency key is:
@@ -103,6 +114,7 @@ Core source metadata:
 - `source_external_id`
 - `source_post_url`
 - `source_poster_name`
+- `source_phone`
 - `source_team_name`
 - `source_team_name_source`
 - `source_posted_at`
@@ -167,6 +179,7 @@ curl -X POST "https://<your-domain>/api/internal/ingest/facebook-matches" \
         "externalId": "group_123_post_456",
         "postUrl": "https://facebook.com/groups/123/posts/456",
         "posterName": "Nguyen Van A",
+        "phone": "0905123456",
         "rawText": "FC Go Vap can tim doi da 19h30 san 7",
         "normalized": {
           "matchType": "FIND_OPPONENT",

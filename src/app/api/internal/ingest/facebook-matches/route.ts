@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import {
   facebookIngestItemSchema,
   facebookIngestRequestSchema,
+  resolveSourcePhone,
   resolveSourceTeamName,
 } from "@/features/matches/facebook-ingest";
 
@@ -96,6 +97,10 @@ export async function POST(request: Request) {
       rawText: payload.rawText,
       posterName: payload.posterName,
     });
+    const resolvedPhone = resolveSourcePhone({
+      phone: payload.phone,
+      rawText: payload.rawText,
+    });
 
     try {
       const createdMatch = await db.match.create({
@@ -105,6 +110,7 @@ export async function POST(request: Request) {
           sourceExternalId: payload.externalId,
           sourcePostUrl: payload.postUrl,
           sourcePosterName: payload.posterName,
+          sourcePhone: resolvedPhone ?? null,
           sourceTeamName: resolvedTeam.teamName,
           sourceTeamNameSource: resolvedTeam.source,
           sourcePostedAt: payload.postedAt ?? null,
@@ -142,6 +148,7 @@ export async function POST(request: Request) {
           data: {
             sourcePostUrl: payload.postUrl,
             sourcePosterName: payload.posterName,
+            sourcePhone: resolvedPhone ?? null,
             sourceTeamName: resolvedTeam.teamName,
             sourceTeamNameSource: resolvedTeam.source,
             sourcePostedAt: payload.postedAt ?? null,

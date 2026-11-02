@@ -144,7 +144,7 @@ export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListPr
                               <span>{formatSkillLabel(match.skillLabel)}</span>
                             </span>
                             <Link
-                              href={`/matches/mock/${match.id}`}
+                              href={`/matches/${match.id}`}
                               className="inline-flex h-7 items-center rounded-[8px] bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-hover"
                             >
                               Nhận kèo

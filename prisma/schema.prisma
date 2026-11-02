@@ -275,6 +275,7 @@ model Match {
   sourceExternalId String?                           @map("source_external_id")
   sourcePostUrl String?                              @map("source_post_url")
   sourcePosterName String?                           @map("source_poster_name")
+  sourcePhone String?                                @map("source_phone")
   sourceTeamName String?                             @map("source_team_name")
   sourceTeamNameSource SourceTeamNameSource?         @map("source_team_name_source")
   sourcePostedAt DateTime?                           @map("source_posted_at")
