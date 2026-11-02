@@ -2,6 +2,7 @@
 // trên iOS Safari cũ (Base UI dùng Object.hasOwn — ES2022).
 import "@/lib/polyfills";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { StickySiteHeader } from "@/components/layout/sticky-site-header";
 import { ScrollToTopOnRouteChange } from "@/components/layout/scroll-to-top-on-route-change";
@@ -52,7 +53,9 @@ export default function RootLayout({
       className={`${appSans.variable} ${appHeading.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-surface-muted">
-        <ScrollToTopOnRouteChange />
+        <Suspense fallback={null}>
+          <ScrollToTopOnRouteChange />
+        </Suspense>
         <StickySiteHeader />
         {children}
       </body>
