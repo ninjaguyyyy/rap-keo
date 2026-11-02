@@ -60,6 +60,14 @@
 - id (uuid, pk)
 - creator_id (fk -> User.id)
 - team_id (fk -> Team.id, nullable)       -- đội tạo kèo
+- source_platform (enum, nullable: FACEBOOK) -- nguồn tạo kèo ngoài app (crawler)
+- source_external_id (string, nullable)      -- id bài nguồn (idempotency)
+- source_post_url (string, nullable)
+- source_poster_name (string, nullable)
+- source_team_name (string, nullable)        -- tên đội resolve từ normalized/raw/poster
+- source_team_name_source (enum, nullable: NORMALIZED, RAW_TEXT, POSTER_NAME)
+- source_posted_at (timestamp, nullable)
+- source_scraped_at (timestamp, nullable)
 - match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE, LOOKING_FOR_TEAM)
 - field_type (enum: F5, F7, F11)
 - skill_tiers (array enum: 7 mức như Team + ANY = mọi trình độ)  -- kèo mở cho nhiều trình độ cùng lúc
@@ -128,6 +136,7 @@
 - Match.location: GIST index (PostGIS) cho query gần.
 - Match.skill_tiers: GIST/GIN index cho filter hasSome (task sau nếu cần).
 - Match.play_times: array — query "OPEN có giờ sắp tới" lọc trong app (MVP).
+- Match.(source_platform, source_external_id): unique composite index để ingest idempotent.
 - Field.location: GIST index.
 - MatchMvpVoteSession.match_id (unique), token_hash (unique), winner_user_id (index).
 - MatchMvpVote.unique(session_id, voter_user_id), index(session_id, candidate_user_id).

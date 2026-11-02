@@ -65,6 +65,26 @@ Then enable the workflow in `.github/workflows/supabase-keep-alive.yml`.
 ### Manual check
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" \
+curl -H "Authorization: Bearer <CRON_SECRET>" \
   https://<your-domain>/api/cron/supabase-keep-alive
 ```
+
+## Internal Facebook ingest API
+
+Endpoint: `POST /api/internal/ingest/facebook-matches`
+
+Auth:
+
+- `Authorization: Bearer <CRAWLER_INGEST_TOKEN>`
+
+Required env vars:
+
+```env
+CRAWLER_INGEST_TOKEN=...
+```
+
+Notes:
+
+- API tự gán `creator_id` là user ADMIN đầu tiên theo `created_at` (ascending).
+- API is idempotent by `(source_platform=FACEBOOK, source_external_id)`.
+- Team name fallback order: `normalized.teamName` -> extract from `rawText` -> `posterName`.

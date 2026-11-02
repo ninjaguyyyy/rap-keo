@@ -4,6 +4,7 @@ import "@/lib/polyfills";
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { StickySiteHeader } from "@/components/layout/sticky-site-header";
+import { ScrollToTopOnRouteChange } from "@/components/layout/scroll-to-top-on-route-change";
 import "./globals.css";
 
 // Phase 1 (Premier League-inspired): body dùng Plus Jakarta Sans, heading dùng Sora.
@@ -51,6 +52,7 @@ export default function RootLayout({
       className={`${appSans.variable} ${appHeading.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-surface-muted">
+        <ScrollToTopOnRouteChange />
         <StickySiteHeader />
         {children}
       </body>

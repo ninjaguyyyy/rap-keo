@@ -4,6 +4,8 @@ export type OpenMatch = {
   homeLogo?: string;
   awayTeam?: string;
   awayLogo?: string;
+  matchType?: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM";
+  neededPlayers?: number;
   kickoff: string;
   fieldType: string;
   district: string;
@@ -48,6 +50,8 @@ export const openMatchesByDate: DayBlock[] = [
       {
         id: "mock-open-2b",
         homeTeam: "Dragon City FC",
+        matchType: "NEED_PLAYERS",
+        neededPlayers: 2,
         kickoff: "19:30",
         fieldType: "Sân 5",
         district: "Q. Sơn Trà",
@@ -94,6 +98,8 @@ export const openMatchesByDate: DayBlock[] = [
       {
         id: "mock-open-5",
         homeTeam: "An Hải Legends",
+        matchType: "NEED_PLAYERS",
+        neededPlayers: 1,
         kickoff: "21:00",
         fieldType: "Sân 5",
         district: "Q. Ngũ Hành Sơn",

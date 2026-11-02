@@ -77,6 +77,18 @@ enum MatchRequestStatus {
   CANCELLED
 }
 
+// Nguồn tạo kèo ngoài hệ thống (crawler/import).
+enum MatchSourcePlatform {
+  FACEBOOK
+}
+
+// Nguồn resolve tên đội cho kèo import.
+enum SourceTeamNameSource {
+  NORMALIZED
+  RAW_TEXT
+  POSTER_NAME
+}
+
 enum InternalSquadSide {
   SIDE_A
   SIDE_B
@@ -258,6 +270,15 @@ model Match {
   id          String                                 @id @default(uuid()) @db.Uuid
   creatorId   String                                 @map("creator_id") @db.Uuid
   teamId      String?                                @map("team_id") @db.Uuid
+  // Metadata nguồn import crawler (nullable: kèo tạo trong app).
+  sourcePlatform MatchSourcePlatform?                @map("source_platform")
+  sourceExternalId String?                           @map("source_external_id")
+  sourcePostUrl String?                              @map("source_post_url")
+  sourcePosterName String?                           @map("source_poster_name")
+  sourceTeamName String?                             @map("source_team_name")
+  sourceTeamNameSource SourceTeamNameSource?         @map("source_team_name_source")
+  sourcePostedAt DateTime?                           @map("source_posted_at")
+  sourceScrapedAt DateTime?                          @map("source_scraped_at")
   matchType   MatchType                              @map("match_type")
   fieldType   FieldType                              @map("field_type")
   // Mảng trình độ: kèo có thể mở cho nhiều trình độ cùng lúc (vd Khá + Mạnh).
@@ -310,6 +331,7 @@ model Match {
   @@index([teamId])
   @@index([fieldId])
   @@index([tournamentId])
+  @@unique([sourcePlatform, sourceExternalId])
   // lọc kèo OPEN có giờ sắp tới: query lọc trong app (array không dùng B-tree trực tiếp).
   @@map("matches")
 }

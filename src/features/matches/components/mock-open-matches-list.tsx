@@ -125,9 +125,16 @@ export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListPr
                     <li key={match.id} className="bg-surface px-2 py-4 first:rounded-t-xl last:rounded-b-xl">
                       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                         <TeamNameWithLogo name={match.homeTeam} logo={match.homeLogo} align="home" />
-                        <p className="min-w-16 text-center text-[16px] leading-none font-extrabold tracking-tight text-ink">
-                          {match.kickoff}
-                        </p>
+                        <div className="min-w-16 text-center">
+                          {match.matchType === "NEED_PLAYERS" && (match.neededPlayers ?? 0) > 0 ? (
+                            <span className="mb-1 inline-flex items-center rounded bg-brand px-1.5 py-1 text-[10px] font-bold leading-none text-white">
+                              Thiếu người: {match.neededPlayers}
+                            </span>
+                          ) : null}
+                          <p className="text-[16px] leading-none font-extrabold tracking-tight text-ink">
+                            {match.kickoff}
+                          </p>
+                        </div>
                         {match.awayTeam ? (
                           <TeamNameWithLogo name={match.awayTeam} logo={match.awayLogo} align="away" />
                         ) : (
