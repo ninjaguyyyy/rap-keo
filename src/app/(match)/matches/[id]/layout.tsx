@@ -26,6 +26,13 @@ export default async function MatchLayout({
   const memberAccessibleMatch = await getMatchById(id, viewer?.id);
   const match = memberAccessibleMatch ?? (await getMatchByIdForVoteLink(id));
   if (!match) notFound();
+
+  // Public match detail dùng component full-page riêng (scoreboard + meta + actions),
+  // nên bỏ wrapper layout này để tránh render header trùng.
+  if (!match.isPrivate) {
+    return <>{children}</>;
+  }
+
   const canOpenTeamPage = Boolean(memberAccessibleMatch && match.isPrivate && match.teamId);
   const backHref = canOpenTeamPage ? `/teams/${match.teamId}` : "/matches";
 

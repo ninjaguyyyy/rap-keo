@@ -69,7 +69,7 @@
 - source_team_name_source (enum, nullable: NORMALIZED, RAW_TEXT, POSTER_NAME)
 - source_posted_at (timestamp, nullable)
 - source_scraped_at (timestamp, nullable)
-- match_type (enum: FIND_OPPONENT, NEED_PLAYERS, FIELD_AVAILABLE, LOOKING_FOR_TEAM)
+- match_type (enum: FIND_OPPONENT, NEED_PLAYERS, INTERNAL)
 - field_type (enum: F5, F7, F11)
 - skill_tiers (array enum: 7 mức như Team + ANY = mọi trình độ)  -- kèo mở cho nhiều trình độ cùng lúc
 - field_id (fk -> Field.id, nullable)     -- sân cụ thể nếu đã có

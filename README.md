@@ -89,3 +89,11 @@ Notes:
 - API is idempotent by `(source_platform=FACEBOOK, source_external_id)`.
 - `phone` (optional) được normalize canonical trước khi lưu `matches.source_phone` (fallback parse từ `rawText`).
 - Team name fallback order: `normalized.teamName` -> extract from `rawText` -> `posterName`.
+
+### Changelog (Crawler)
+
+- 2026-11-03: Deprecated match types `FIELD_AVAILABLE` và `LOOKING_FOR_TEAM` đã bị xóa khỏi hệ thống.
+- `normalized.matchType` chỉ còn nhận: `FIND_OPPONENT | NEED_PLAYERS | INTERNAL`.
+- Nếu payload gửi giá trị cũ, API trả per-item error:
+  - `DEPRECATED_MATCH_TYPE:FIELD_AVAILABLE`
+  - `DEPRECATED_MATCH_TYPE:LOOKING_FOR_TEAM`

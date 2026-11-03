@@ -25,6 +25,17 @@ type IngestResult = {
   error?: string;
 };
 
+function getDeprecatedMatchType(item: unknown): string | null {
+  if (!item || typeof item !== "object") return null;
+  const normalized = (item as { normalized?: unknown }).normalized;
+  if (!normalized || typeof normalized !== "object") return null;
+  const matchType = (normalized as { matchType?: unknown }).matchType;
+  if (matchType !== "FIELD_AVAILABLE" && matchType !== "LOOKING_FOR_TEAM") {
+    return null;
+  }
+  return matchType;
+}
+
 function isAuthorized(request: Request): {
   ok: boolean;
   missingConfig: boolean;
@@ -84,9 +95,12 @@ export async function POST(request: Request) {
     const parsedItem = facebookIngestItemSchema.safeParse(item);
     if (!parsedItem.success) {
       rejected += 1;
+      const deprecatedType = getDeprecatedMatchType(item);
       results.push({
         status: "REJECTED",
-        error: "INVALID_ITEM",
+        error: deprecatedType
+          ? `DEPRECATED_MATCH_TYPE:${deprecatedType}`
+          : "INVALID_ITEM",
       });
       continue;
     }

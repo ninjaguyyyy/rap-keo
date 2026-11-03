@@ -4,7 +4,10 @@ export type OpenMatch = {
   homeLogo?: string;
   awayTeam?: string;
   awayLogo?: string;
-  matchType?: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM";
+  matchType?:
+    | "FIND_OPPONENT"
+    | "NEED_PLAYERS"
+    | "INTERNAL";
   neededPlayers?: number;
   kickoff: string;
   fieldType: string;

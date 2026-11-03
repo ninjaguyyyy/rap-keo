@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/features/matches/queries";
 import { listTeamMembers } from "@/features/teams/queries";
 import { MatchDetailTabs } from "@/features/matches/components/match-detail-tabs";
-import { MockMatchFlowActions } from "@/features/matches/components/mock-match-flow-actions";
+import { PublicMatchDetailView } from "@/features/matches/components/public-match-detail-view";
 import {
   getSessionResultSummary,
   getOrCreateVoteSessionByMatchId,
@@ -70,37 +69,30 @@ export default async function MatchDetailPage({
     const areaLabel = match.field?.name ?? match.area ?? "Chưa rõ khu vực";
     const firstSkillTier = match.skillTiers[0];
     const skillLabel = firstSkillTier ? skillTierLabels[firstSkillTier] : "Mọi trình độ";
+    const kickoffTime = new Intl.DateTimeFormat("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+    const firstPlayTime = [...match.playTimes].sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+    const kickoff = firstPlayTime ? kickoffTime.format(firstPlayTime) : "--:--";
+    const homeTeam = match.sourceTeamName ?? match.team?.name ?? match.creator.name ?? "Đội chủ nhà";
+    const awayTeam = match.requests[0]?.requesterTeam?.name ?? match.opponentName ?? "Đội khách";
 
     return (
-      <div className="space-y-3 p-4">
-        <MockMatchFlowActions
-          matchId={match.id}
-          phone={match.sourcePhone ?? ""}
-          fbLink={match.sourcePostUrl ?? ""}
-        />
-
-        <div className="space-y-1.5 px-1 text-center text-ink-muted">
-          <p className="text-[12px] font-normal tracking-[0.56px]">
-            <span>Phủi League</span>
-            {dayLabel ? <span className="mx-2.5">•</span> : null}
-            {dayLabel ? <span>{dayLabel}</span> : null}
-          </p>
-          <p className="text-[12px]">
-            <span>{fieldTypeLabels[match.fieldType]}</span>
-            <span className="mx-2">•</span>
-            <span>{areaLabel}</span>
-            <span className="mx-2">•</span>
-            <span>{skillLabel}</span>
-          </p>
-        </div>
-
-        <Link
-          href="/matches"
-          className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#ebe5eb] text-xs font-medium text-brand"
-        >
-          Về danh sách kèo
-        </Link>
-      </div>
+      <PublicMatchDetailView
+        matchId={match.id}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        kickoff={kickoff}
+        dayLabel={dayLabel}
+        fieldTypeLabel={fieldTypeLabels[match.fieldType]}
+        district={areaLabel}
+        skillLabel={skillLabel}
+        phone={match.sourcePhone ?? ""}
+        fbLink={match.sourcePostUrl ?? ""}
+      />
     );
   }
 

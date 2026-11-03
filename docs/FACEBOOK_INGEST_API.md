@@ -63,7 +63,7 @@ Required server env vars:
   - `phone`: optional, min length `6`, max length `32`.
   - `rawText`: required, max length `10000`.
   - `normalized` is required with:
-    - `matchType`: one of `FIND_OPPONENT | NEED_PLAYERS | FIELD_AVAILABLE | LOOKING_FOR_TEAM`
+    - `matchType`: one of `FIND_OPPONENT | NEED_PLAYERS | INTERNAL`
     - `fieldType`: one of `F5 | F7 | F11`
     - `skillTiers`: array, min `1`, max `8`, values from `MatchSkillTier`
     - `playTimes`: array, min `1`, max `10`, ISO datetime with offset
@@ -163,6 +163,8 @@ Match data:
 Per-item rejection in `results`:
 
 - `INVALID_ITEM`
+- `DEPRECATED_MATCH_TYPE:FIELD_AVAILABLE`
+- `DEPRECATED_MATCH_TYPE:LOOKING_FOR_TEAM`
 - `CREATE_FAILED`
 
 ## cURL Example

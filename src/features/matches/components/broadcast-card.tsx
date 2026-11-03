@@ -1,5 +1,4 @@
-// Layout broadcast (spotlight header + hex pattern) — dùng cho mọi loại kèo
-// (FIND_OPPONENT, NEED_PLAYERS, LOOKING_FOR_TEAM, FIELD_AVAILABLE).
+// Layout broadcast (spotlight header + hex pattern) — dùng cho các loại kèo còn lại.
 // Lấy cảm hứng từ docs/football-design.html.
 import { Card } from "@/components/ui/card";
 import type { MatchListItem } from "../queries";
@@ -34,7 +33,7 @@ function StadiumIcon({ className = "" }: { className?: string }) {
   );
 }
 
-// Icon người (users) cho header spotlight khi kèo thiếu người / tìm đội.
+// Icon người (users) cho header spotlight khi kèo thiếu người / nội bộ.
 function UsersIcon({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -57,80 +56,40 @@ function UsersIcon({ className = "" }: { className?: string }) {
   );
 }
 
-// Icon cờ (field/flag) cho header spotlight khi kèo có sân trống.
-function FlagIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-      <line x1="4" y1="22" x2="4" y2="15" />
-    </svg>
-  );
-}
-
-// Trích "N cầu rảnh" từ note (form ghi dạng "[N cầu rảnh] ..."). Fallback 1.
-function parsePlayersCount(note: string | null): number {
-  if (!note) return 1;
-  const m = note.match(/\[(\d+)\s*cầu rảnh\]/i);
-  return m ? Number(m[1]) : 1;
-}
-
 // Nhãn tag giữa body theo loại kèo.
 function bodyTag(matchType: MatchListItem["matchType"]): string {
   switch (matchType) {
     case "NEED_PLAYERS":
       return "Thiếu người";
-    case "LOOKING_FOR_TEAM":
-      return "Tìm đội";
-    case "FIELD_AVAILABLE":
-      return "Có sân trống";
+    case "INTERNAL":
+      return "Nội bộ";
     default:
-      return "Đang tìm đối";
+      return "Tìm đối";
   }
 }
 
 // Icon giữa body theo loại kèo.
-function bodyIcon(matchType: MatchListItem["matchType"], playersCount: number): string {
-  if (matchType === "LOOKING_FOR_TEAM") return "👤".repeat(playersCount);
+function bodyIcon(matchType: MatchListItem["matchType"]): string {
   if (matchType === "NEED_PLAYERS") return "🧑‍🤝‍🧑"; // thiếu người — tìm thêm người
-  if (matchType === "FIELD_AVAILABLE") return "🏟️";
+  if (matchType === "INTERNAL") return "🧑‍🤝‍🧑";
   return "⚽"; // tìm đối
 }
 
 export function BroadcastCard({ match }: { match: MatchListItem }) {
   const isLive = isLiveStatus(match.status);
-  const isLookingForTeam = match.matchType === "LOOKING_FOR_TEAM";
   const isNeedPlayers = match.matchType === "NEED_PLAYERS";
-  const isFieldAvailable = match.matchType === "FIELD_AVAILABLE";
-  // Header trái: LOOKING_FOR_TEAM -> tên user tạo (cá nhân); khác -> venue (sân).
-  const headerLabel = isLookingForTeam
-    ? (match.creator.name ?? "Người dùng ẩn danh")
-    : (areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có sân");
-  const playersCount = parsePlayersCount(match.note);
+  const isInternal = match.matchType === "INTERNAL";
+  const headerLabel = areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có sân";
 
   // Icon header theo loại kèo.
-  const HeaderIcon = isLookingForTeam || isNeedPlayers
+  const HeaderIcon = isInternal || isNeedPlayers
     ? UsersIcon
-    : isFieldAvailable
-      ? FlagIcon
-      : StadiumIcon;
+    : StadiumIcon;
 
-  // Tone spotlight header theo loại kèo — phân biệt 4 màu (xem globals.css).
-  const spotlightTone = isFieldAvailable
-    ? "spotlight-field"
-    : isNeedPlayers
+  // Tone spotlight header theo loại kèo.
+  const spotlightTone = isNeedPlayers
       ? "spotlight-players"
-      : isLookingForTeam
+      : isInternal
         ? "spotlight-team"
         : "spotlight-opponent";
 
@@ -155,29 +114,16 @@ export function BroadcastCard({ match }: { match: MatchListItem }) {
         )}
       </div>
 
-      {/* Body trắng: khu giữa hiển thị tag loại kèo nổi bật + icon.
-          LOOKING_FOR_TEAM: "N cầu rảnh" + icon người (1-2 cái).
-          Khác: icon (⚽/🏟️) + tag (TÌM ĐỐI/THIẾU NGƯỜI/CÓ SÂN TRỐNG). */}
+      {/* Body trắng: khu giữa hiển thị tag loại kèo nổi bật + icon. */}
       <div className="flex flex-col gap-3 p-4">
-        {isLookingForTeam ? (
-          <div className="flex items-center justify-center gap-2 py-1">
-            <span className="text-3xl" aria-hidden="true">
-              {bodyIcon(match.matchType, playersCount)}
-            </span>
-            <span className="text-lg font-extrabold uppercase tracking-wide text-brand">
-              {playersCount} cầu rảnh
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2 py-1">
-            <span className="text-3xl" aria-hidden="true">
-              {bodyIcon(match.matchType, playersCount)}
-            </span>
-            <span className="text-lg font-extrabold uppercase tracking-wide text-brand">
-              {bodyTag(match.matchType)}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center justify-center gap-2 py-1">
+          <span className="text-3xl" aria-hidden="true">
+            {bodyIcon(match.matchType)}
+          </span>
+          <span className="text-lg font-extrabold uppercase tracking-wide text-brand">
+            {bodyTag(match.matchType)}
+          </span>
+        </div>
 
         <SkillFieldBadges match={match} />
 

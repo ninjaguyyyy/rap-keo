@@ -9,7 +9,7 @@ export const MVP_VOTE_TTL_MS = 24 * 60 * 60 * 1000;
 
 type MatchVoteContext = {
   id: string;
-  matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM" | "INTERNAL";
+  matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "INTERNAL";
   status: "OPEN" | "MATCHED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
   playTimes: Date[];
   teamId: string | null;
@@ -27,7 +27,7 @@ type VoteSessionWithMatch = {
   winnerUserId: string | null;
   match: {
     id: string;
-    matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "FIELD_AVAILABLE" | "LOOKING_FOR_TEAM" | "INTERNAL";
+    matchType: "FIND_OPPONENT" | "NEED_PLAYERS" | "INTERNAL";
     status: "OPEN" | "MATCHED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
     playTimes: Date[];
     teamId: string | null;

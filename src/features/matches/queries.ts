@@ -40,6 +40,11 @@ export type MatchFilters = {
   timeSlots?: TimeSlot[];
 };
 
+type ListMatchesOptions = {
+  includeAllStatuses?: boolean;
+  includePast?: boolean;
+};
+
 // Ép chuỗi (từ query param) về enum hợp lệ, ngược lại trả undefined.
 export function parseMatchFilters(params: {
   matchType?: string;
@@ -104,7 +109,10 @@ async function matchIdsInTimeSlots(slots: TimeSlot[]): Promise<Set<string>> {
  * Liệt kê kèo đang mở, có ít nhất 1 giờ sắp diễn ra, sắp xếp theo giờ sớm nhất.
  * Hỗ trợ lọc theo loại kèo / loại sân / trình độ / khung giờ. (Lọc "gần" theo geo để task sau.)
  */
-export async function listMatches(filters: MatchFilters = {}) {
+export async function listMatches(
+  filters: MatchFilters = {},
+  options: ListMatchesOptions = {},
+) {
   // Lọc khung giờ trước (raw SQL) -> ra tập id, rồi giao với các filter còn lại.
   let timeSlotIds: Set<string> | undefined;
   if (filters.timeSlots?.length) {
@@ -118,7 +126,7 @@ export async function listMatches(filters: MatchFilters = {}) {
   // hiện trong team detail, KHÔNG lên bảng kèo công khai /matches.
   const matches = await db.match.findMany({
     where: {
-      status: "OPEN",
+      ...(options.includeAllStatuses ? {} : { status: "OPEN" }),
       isPrivate: false,
       ...(timeSlotIds ? { id: { in: [...timeSlotIds] } } : {}),
       ...(filters.matchType ? { matchType: filters.matchType } : {}),
@@ -134,6 +142,16 @@ export async function listMatches(filters: MatchFilters = {}) {
       creator: { select: { id: true, name: true } },
     },
   });
+
+  if (options.includePast) {
+    // Chế độ "All Kèo": giữ toàn bộ kèo theo filter, gồm cả đã qua giờ.
+    matches.sort(
+      (a, b) =>
+        Math.min(...a.playTimes.map((p) => p.getTime())) -
+        Math.min(...b.playTimes.map((p) => p.getTime())),
+    );
+    return matches;
+  }
 
   // Lọc trong app: giữ kèo có ít nhất 1 giờ >= now.
   const now = Date.now();

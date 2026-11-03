@@ -54,8 +54,6 @@ export type MatchCardProps = { match: MatchListItem };
 export const matchTypeBadge: Record<string, string> = {
   FIND_OPPONENT: "bg-type-opponent-soft text-type-opponent",
   NEED_PLAYERS: "bg-type-players-soft text-type-players",
-  FIELD_AVAILABLE: "bg-type-field-soft text-type-field",
-  LOOKING_FOR_TEAM: "bg-type-team-soft text-type-team",
   // Trận nội bộ: tông brand-soft (không lên /matches nhưng vẫn cần badge nếu render).
   INTERNAL: "bg-brand-soft text-brand",
 };

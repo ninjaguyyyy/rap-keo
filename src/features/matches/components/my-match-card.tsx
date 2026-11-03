@@ -36,22 +36,11 @@ function UsersIcon({ className = "" }: { className?: string }) {
     </svg>
   );
 }
-function FlagIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-      <line x1="4" y1="22" x2="4" y2="15" />
-    </svg>
-  );
-}
-
 function spotlightToneFor(type: MatchType): string {
   switch (type) {
-    case "FIELD_AVAILABLE":
-      return "spotlight-field";
     case "NEED_PLAYERS":
       return "spotlight-players";
-    case "LOOKING_FOR_TEAM":
+    case "INTERNAL":
       return "spotlight-team";
     default:
       return "spotlight-opponent";
@@ -59,9 +48,6 @@ function spotlightToneFor(type: MatchType): string {
 }
 
 function headerLabel(match: MyMatchItem): string {
-  if (match.matchType === "LOOKING_FOR_TEAM") {
-    return match.creator.name ?? "Người dùng ẩn danh";
-  }
   return areaLabels[match.area ?? ""] ?? match.field?.name ?? "Chưa có sân";
 }
 
@@ -71,11 +57,9 @@ export function MyMatchCard({ match }: { match: MyMatchItem }) {
   const hasRequests = pendingRequests.length > 0;
 
   const HeaderIcon =
-    match.matchType === "LOOKING_FOR_TEAM" || match.matchType === "NEED_PLAYERS"
+    match.matchType === "INTERNAL" || match.matchType === "NEED_PLAYERS"
       ? UsersIcon
-      : match.matchType === "FIELD_AVAILABLE"
-        ? FlagIcon
-        : StadiumIcon;
+      : StadiumIcon;
 
   return (
     <Card
@@ -113,11 +97,9 @@ export function MyMatchCard({ match }: { match: MyMatchItem }) {
         {/* Tag loại kèo nổi giữa (giống broadcast-card). */}
         <div className="flex items-center justify-center gap-2 py-1">
           <span className="text-3xl" aria-hidden="true">
-            {match.matchType === "FIELD_AVAILABLE"
-              ? "🏟️"
-              : match.matchType === "NEED_PLAYERS"
-                ? "🧑‍🤝‍🧑"
-                : "⚽"}
+            {match.matchType === "NEED_PLAYERS" || match.matchType === "INTERNAL"
+              ? "🧑‍🤝‍🧑"
+              : "⚽"}
           </span>
           <span className="text-lg font-extrabold uppercase tracking-wide text-brand-spotlight">
             {matchTypeLabels[match.matchType]}

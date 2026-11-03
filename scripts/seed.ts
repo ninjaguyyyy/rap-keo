@@ -206,10 +206,10 @@ async function main() {
       {
         creatorId: user.id,
         teamId: team.id,
-        matchType: "FIELD_AVAILABLE",
+        matchType: "FIND_OPPONENT",
         fieldType: "F11",
         skillTiers: ["ANY"],
-        // Kèo "có sân trống": gắn fieldId cụ thể để test hasField=true.
+        // Kèo đã có sân: gắn fieldId cụ thể để test hasField=true.
         fieldId: fieldMyDinh,
         area: "chuyen_viet",
         playTimes: [vnDateTime(2, "16:30")],
@@ -217,23 +217,21 @@ async function main() {
       },
       {
         creatorId: user.id,
-        // Không gắn teamId — cá nhân rảnh tìm đội.
-        matchType: "LOOKING_FOR_TEAM",
+        matchType: "NEED_PLAYERS",
         fieldType: "F7",
         skillTiers: ["AVERAGE", "ABOVE_AVERAGE"],
         area: "trung_tam",
         playTimes: [vnDateTime(2, "19:30")],
-        // Format "[N cầu rảnh] note" để card hiển thị đúng (xem broadcast-card.tsx).
-        note: "[1 cầu rảnh] Mình rảnh 1 người, tìm đội thiếu người đá kèo.",
+        note: "Thiếu 1 người, đội nào rảnh vào ghép kèo nhé.",
       },
       {
         creatorId: user.id,
-        matchType: "LOOKING_FOR_TEAM",
+        matchType: "NEED_PLAYERS",
         fieldType: "F5",
         skillTiers: ["GOOD", "STRONG"],
         area: "da_phuoc",
         playTimes: [vnDateTime(2, "20:30"), vnDateTime(2, "21:30")],
-        note: "[2 cầu rảnh] 2 anh em rảnh, tìm đội nhận đá nội bộ hoặc kèo.",
+        note: "Thiếu 2 người, ai rảnh vào đội chiến luôn.",
       },
     ],
   });

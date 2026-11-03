@@ -16,8 +16,7 @@ const normalizedPayloadSchema = z.object({
   matchType: z.enum([
     MatchType.FIND_OPPONENT,
     MatchType.NEED_PLAYERS,
-    MatchType.FIELD_AVAILABLE,
-    MatchType.LOOKING_FOR_TEAM,
+    MatchType.INTERNAL,
   ]),
   fieldType: z.enum([FieldType.F5, FieldType.F7, FieldType.F11]),
   skillTiers: z

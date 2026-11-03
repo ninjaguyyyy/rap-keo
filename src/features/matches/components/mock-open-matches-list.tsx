@@ -11,6 +11,7 @@ import {
 type MockOpenMatchesListProps = Readonly<{
   blockKey: string;
   matches: OpenMatch[];
+  includeReported?: boolean;
 }>;
 
 function kickoffToMinutes(value: string): number {
@@ -29,11 +30,24 @@ function formatKickoffLabel(value: string): string {
 }
 
 function formatSkillLabel(value: string): string {
-  if (value === "Mọi trình độ") return "ALL";
+  if (value === "Mọi trình độ") return "All";
   if (value === "Trung bình") return "TB";
   if (value === "Trung Bình Khá" || value === "TB Khá" || value === "TB khá") return "TBK";
   if (value === "Trung Bình Yếu" || value === "TB Yếu" || value === "TB yếu") return "TBY";
   return value;
+}
+
+function getChipLabel(match: OpenMatch): string {
+  if (match.matchType === "INTERNAL") return "Nội bộ";
+  return formatSkillLabel(match.skillLabel);
+}
+
+function getActionLabel(match: OpenMatch): string {
+  if (match.matchType === "FIND_OPPONENT") return "Tìm đối";
+  if (match.matchType === "INTERNAL" || match.matchType === "NEED_PLAYERS") {
+    return "Tuyển cầu";
+  }
+  return "Nhận kèo";
 }
 
 function TeamNameWithLogo({
@@ -71,7 +85,11 @@ function TeamNameWithLogo({
   );
 }
 
-export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListProps) {
+export function MockOpenMatchesList({
+  blockKey,
+  matches,
+  includeReported = false,
+}: MockOpenMatchesListProps) {
   const [reportedIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
 
@@ -89,8 +107,8 @@ export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListPr
   });
 
   const filteredMatches = useMemo(
-    () => matches.filter((match) => !reportedIds.includes(match.id)),
-    [matches, reportedIds],
+    () => (includeReported ? matches : matches.filter((match) => !reportedIds.includes(match.id))),
+    [includeReported, matches, reportedIds],
   );
 
   const groupedMatches = useMemo(
@@ -141,13 +159,13 @@ export function MockOpenMatchesList({ blockKey, matches }: MockOpenMatchesListPr
                           <div className="flex items-center gap-2">
                             <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-surface-muted px-2 text-[11px] font-semibold text-ink-muted">
                               <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-brand/45" />
-                              <span>{formatSkillLabel(match.skillLabel)}</span>
+                              <span>{getChipLabel(match)}</span>
                             </span>
                             <Link
                               href={`/matches/${match.id}`}
-                              className="inline-flex h-7 items-center rounded-[8px] bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-hover"
+                              className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[8px] bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-hover"
                             >
-                              Nhận kèo
+                              {getActionLabel(match)}
                             </Link>
                           </div>
                         )}

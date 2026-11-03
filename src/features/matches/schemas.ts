@@ -11,8 +11,7 @@ import {
 const matchTypeEnum = z.enum([
   MatchType.FIND_OPPONENT,
   MatchType.NEED_PLAYERS,
-  MatchType.FIELD_AVAILABLE,
-  MatchType.LOOKING_FOR_TEAM,
+  MatchType.INTERNAL,
 ]);
 const fieldTypeEnum = z.enum([FieldType.F5, FieldType.F7, FieldType.F11]);
 const skillTierEnum = z.enum([
@@ -64,7 +63,6 @@ const skillTiersSchema = z
   .min(1, "Chọn ít nhất 1 trình độ");
 
 // hasField: đã có sân cụ thể hay chưa (boolean).
-// playersCount: số cầu rảnh (1-2), chỉ dùng cho LOOKING_FOR_TEAM. Mặc định 1.
 export const createMatchSchema = z.object({
   matchType: matchTypeEnum,
   fieldType: fieldTypeEnum,
@@ -72,7 +70,6 @@ export const createMatchSchema = z.object({
   skillTiers: skillTiersSchema,
   playTimes: playTimesSchema,
   area: areaSchema,
-  playersCount: z.number().int().min(1).max(2).default(1),
   note: z.string().trim().max(500, "Ghi chú tối đa 500 ký tự").optional(),
 });
 

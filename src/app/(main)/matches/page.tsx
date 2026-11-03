@@ -1,5 +1,5 @@
 import { MatchFilters } from "@/features/matches/components/match-filters";
-import { MatchesHeroBanner } from "@/features/matches/components/matches-hero-banner";
+import { HeroTabKey, MatchesHeroBanner } from "@/features/matches/components/matches-hero-banner";
 import { MyMatchFab } from "@/features/matches/components/my-match-fab";
 import { MockOpenMatchesList } from "@/features/matches/components/mock-open-matches-list";
 import { ScrollToTopOnMount } from "@/components/layout/scroll-to-top-on-mount";
@@ -32,9 +32,10 @@ function getVnDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function getPrimaryPlayTime(match: MatchRow): Date | null {
+function getPrimaryPlayTime(match: MatchRow, preferUpcoming: boolean): Date | null {
   if (match.playTimes.length === 0) return null;
   const sorted = [...match.playTimes].sort((a, b) => a.getTime() - b.getTime());
+  if (!preferUpcoming) return sorted[0];
   const now = Date.now();
   return sorted.find((value) => value.getTime() >= now) ?? sorted[0];
 }
@@ -59,8 +60,16 @@ function parsePlayersCount(note: string | null): number | undefined {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-function toOpenMatch(match: MatchRow): OpenMatch | null {
-  const primaryTime = getPrimaryPlayTime(match);
+function kickoffToMinutes(value: string): number {
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return 0;
+  return hour * 60 + minute;
+}
+
+function toOpenMatch(match: MatchRow, preferUpcoming: boolean): OpenMatch | null {
+  const primaryTime = getPrimaryPlayTime(match, preferUpcoming);
   if (!primaryTime) return null;
 
   const kickoff = kickoffFormatter.format(primaryTime);
@@ -79,8 +88,7 @@ function toOpenMatch(match: MatchRow): OpenMatch | null {
   const matchType =
     match.matchType === "FIND_OPPONENT" ||
     match.matchType === "NEED_PLAYERS" ||
-    match.matchType === "FIELD_AVAILABLE" ||
-    match.matchType === "LOOKING_FOR_TEAM"
+    match.matchType === "INTERNAL"
       ? match.matchType
       : undefined;
 
@@ -99,16 +107,52 @@ function toOpenMatch(match: MatchRow): OpenMatch | null {
   };
 }
 
+function countRenderableMatches(matches: MatchRow[], preferUpcoming: boolean): number {
+  return matches.reduce(
+    (count, match) => (toOpenMatch(match, preferUpcoming) ? count + 1 : count),
+    0,
+  );
+}
+
+function buildTabHref(
+  params: Record<string, string | string[] | undefined>,
+  tab: HeroTabKey,
+): string {
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        query.append(key, item);
+      }
+      continue;
+    }
+    query.set(key, value);
+  }
+
+  if (tab === "open") {
+    query.delete("tab");
+  } else {
+    query.set("tab", "all");
+  }
+
+  const queryString = query.toString();
+  return queryString ? `/matches?${queryString}` : "/matches";
+}
+
 // Next 16: searchParams là Promise. skillTier có thể lặp lại (?skillTier=A&skillTier=B).
 export default async function MatchesPage({
   searchParams,
 }: Readonly<{
   searchParams: Promise<{
     day?: string;
+    tab?: string;
     [key: string]: string | string[] | undefined;
   }>;
 }>) {
   const params = await searchParams;
+  const selectedTab = params.tab === "all" ? "all" : "open";
 
   const filters = parseMatchFilters({
     matchType: typeof params.matchType === "string" ? params.matchType : undefined,
@@ -116,11 +160,43 @@ export default async function MatchesPage({
     skillTier: params.skillTier,
     timeSlot: params.timeSlot,
   });
-  const matches = await listMatches(filters);
+
+  const [openMatches, allMatches] = await Promise.all([
+    listMatches(filters),
+    listMatches(filters, {
+      includeAllStatuses: true,
+      includePast: true,
+    }),
+  ]);
+
+  const todayVnKey = getVnDateKey(new Date());
+  const todayVnStart = parseVnDateKey(todayVnKey) ?? new Date();
+  const allMatchesFromToday = allMatches.filter((match) =>
+    match.playTimes.some((playTime) => playTime.getTime() >= todayVnStart.getTime()),
+  );
+
+  const preferUpcomingTime = selectedTab !== "all";
+  const matches = selectedTab === "all" ? allMatchesFromToday : openMatches;
+
+  const heroTabs = [
+    {
+      key: "open" as const,
+      label: "Kèo đang mở",
+      href: buildTabHref(params, "open"),
+      count: countRenderableMatches(openMatches, true),
+    },
+    {
+      key: "all" as const,
+      label: "All Kèo",
+      href: buildTabHref(params, "all"),
+      count: countRenderableMatches(allMatchesFromToday, false),
+    },
+  ];
+
   const groupedByDay = new Map<string, MatchRow[]>();
 
   for (const match of matches) {
-    const primaryTime = getPrimaryPlayTime(match);
+    const primaryTime = getPrimaryPlayTime(match, preferUpcomingTime);
     if (!primaryTime) continue;
     const key = getVnDateKey(primaryTime);
     const bucket = groupedByDay.get(key);
@@ -135,12 +211,16 @@ export default async function MatchesPage({
   const availableDayKeys = [...groupedByDay.keys()].sort((a, b) =>
     a.localeCompare(b),
   );
+  const firstAvailableDayKey =
+    availableDayKeys.length > 0 ? availableDayKeys[0] : fallbackDayKey;
   const lastAvailableDayKey =
     availableDayKeys.length > 0
       ? availableDayKeys[availableDayKeys.length - 1]
       : fallbackDayKey;
 
-  const startDate = parseVnDateKey(fallbackDayKey) ?? new Date();
+  const startDate =
+    parseVnDateKey(selectedTab === "all" ? firstAvailableDayKey : fallbackDayKey) ??
+    new Date();
   const endDate = parseVnDateKey(lastAvailableDayKey) ?? startDate;
   const totalDays = Math.max(
     1,
@@ -158,14 +238,18 @@ export default async function MatchesPage({
     };
   });
 
+  const defaultDayKey = selectedTab === "all" ? firstAvailableDayKey : fallbackDayKey;
   const selectedDayKey =
-    typeof params.day === "string"
-      && dayOptions.some((day) => day.key === params.day)
+    typeof params.day === "string" && dayOptions.some((day) => day.key === params.day)
       ? params.day
-      : fallbackDayKey;
+      : defaultDayKey;
   const selectedMatches = (groupedByDay.get(selectedDayKey) ?? [])
-    .map(toOpenMatch)
-    .filter((value): value is OpenMatch => value !== null);
+    .map((match) => toOpenMatch(match, preferUpcomingTime))
+    .filter((value): value is OpenMatch => value !== null)
+    .sort((a, b) => {
+      if (selectedTab !== "all") return 0;
+      return kickoffToMinutes(a.kickoff) - kickoffToMinutes(b.kickoff);
+    });
 
   // /matches là public; chỉ cần check user để render FAB trạng thái kèo cá nhân.
   const user = await getCurrentUser();
@@ -176,7 +260,11 @@ export default async function MatchesPage({
     <div className="flex flex-col gap-4 pb-6">
       <ScrollToTopOnMount />
       <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
-        <MatchesHeroBanner className="rounded-none border-x-0 shadow-none" />
+        <MatchesHeroBanner
+          className="rounded-none border-x-0 shadow-none"
+          activeTab={selectedTab}
+          tabs={heroTabs}
+        />
       </div>
 
       <div className="mt-4 -mx-4 flex flex-col gap-4">
@@ -187,6 +275,7 @@ export default async function MatchesPage({
         <MockOpenMatchesList
           blockKey={selectedDayKey}
           matches={selectedMatches}
+          includeReported={selectedTab === "all"}
         />
       </div>
 

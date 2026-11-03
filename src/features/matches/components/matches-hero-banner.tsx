@@ -1,9 +1,25 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-const HERO_TABS = ["Kèo đang mở", "Kèo đã ráp", "Kèo bị report"];
+export type HeroTabKey = "open" | "all";
 
-export function MatchesHeroBanner({ className }: Readonly<{ className?: string }>) {
+type HeroTabItem = {
+  key: HeroTabKey;
+  label: string;
+  href: string;
+  count: number;
+};
+
+const DEFAULT_HERO_TABS: HeroTabItem[] = [
+  { key: "open", label: "Kèo đang mở", href: "/matches", count: 0 },
+  { key: "all", label: "All Kèo", href: "/matches?tab=all", count: 0 },
+];
+
+export function MatchesHeroBanner({
+  className,
+  activeTab = "open",
+  tabs = DEFAULT_HERO_TABS,
+}: Readonly<{ className?: string; activeTab?: HeroTabKey; tabs?: HeroTabItem[] }>) {
   return (
     <section
       className={cn(
@@ -51,17 +67,21 @@ export function MatchesHeroBanner({ className }: Readonly<{ className?: string }
 
       <div className="bg-[linear-gradient(90deg,rgba(72,57,182,0.95)_0%,rgba(27,126,210,0.95)_100%)] px-4 py-2.5">
         <nav aria-label="Nhóm giải" className="flex items-center gap-5 text-white/85">
-          {HERO_TABS.map((tab, index) => (
-            <span
-              key={tab}
+          {tabs.map((tab) => (
+            <Link
+              key={tab.key}
+              href={tab.href}
               className={
-                index === 0
+                activeTab === tab.key
                   ? "relative text-sm font-semibold text-white after:absolute after:-bottom-2.5 after:left-0 after:h-1 after:w-full after:rounded-full after:bg-white"
                   : "text-sm font-medium"
               }
             >
-              {tab}
-            </span>
+              <span>{tab.label}</span>
+              <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[11px] leading-none">
+                {tab.count}
+              </span>
+            </Link>
           ))}
         </nav>
       </div>

@@ -12,8 +12,6 @@ import { baseSkillTierLabels } from "@/lib/skill-labels";
 export const matchTypeLabels: Record<MatchType, string> = {
   FIND_OPPONENT: "Tìm đối",
   NEED_PLAYERS: "Thiếu người",
-  FIELD_AVAILABLE: "Có sân trống",
-  LOOKING_FOR_TEAM: "Tìm đội",
   // Trận nội bộ team tự tạo (private, không lên /matches).
   INTERNAL: "Nội bộ",
 };

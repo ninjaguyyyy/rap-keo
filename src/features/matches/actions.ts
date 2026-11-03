@@ -32,8 +32,6 @@ export async function createMatch(
     .filter(Boolean);
   // hasField từ form: hidden input value "on"/"off" (client control).
   const hasFieldInput = formData.get("hasField") === "on";
-  // playersCount từ form: "1" hoặc "2" (radio). Mặc định 1.
-  const playersRaw = Number(formData.get("playersCount")) || 1;
 
   const parsed = createMatchSchema.safeParse({
     matchType: formData.get("matchType"),
@@ -42,7 +40,6 @@ export async function createMatch(
     skillTiers: skillRaw,
     playTimes: playTimesRaw,
     area: formData.get("area"),
-    playersCount: playersRaw,
     note: formData.get("note"),
   });
 
@@ -60,16 +57,8 @@ export async function createMatch(
     return { fieldErrors };
   }
 
-  const { matchType, fieldType, hasField, skillTiers, playTimes, area, playersCount, note } =
+  const { matchType, fieldType, hasField, skillTiers, playTimes, area, note } =
     parsed.data;
-
-  // LOOKING_FOR_TEAM: ghép "[N cầu rảnh] " vào đầu note để card hiển thị (không thêm cột DB).
-  // Các loại khác: không ghi playersCount vào note.
-  const isLookingForTeam = matchType === "LOOKING_FOR_TEAM";
-  const noteWithCount =
-    isLookingForTeam && playersCount > 0
-      ? `[${playersCount} cầu rảnh] ${note ?? ""}`.trim()
-      : note || null;
 
   try {
     await db.match.create({
@@ -81,7 +70,7 @@ export async function createMatch(
         skillTiers,
         playTimes,
         area,
-        note: noteWithCount,
+        note: note || null,
         status: "OPEN",
         // Đánh dấu đã có sân hay chưa (MVP: boolean, chưa gắn fieldId cụ thể).
         // Khi build field picker: hasField=true -> chọn Field -> gán fieldId.

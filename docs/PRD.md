@@ -41,7 +41,7 @@
 ## 8. Loại kèo
 - `FIND_OPPONENT`: tìm đối.
 - `NEED_PLAYERS`: thiếu người.
-- `FIELD_AVAILABLE`: có sân trống cần rủ kèo.
+- `INTERNAL`: trận nội bộ.
 
 ## 9. Metrics thành công
 - Số kèo được tạo / tuần.

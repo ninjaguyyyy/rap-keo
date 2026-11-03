@@ -57,13 +57,13 @@ function buildPrompt(rawText: string): string {
   return `Bạn là trợ lý parse kèo bóng đá phủi. Từ text người dùng dán vào (copy từ group FB), trích ra các trường.struct của kèo (JSON).
 
 Quy ước giá trị hợp lệ (CHỈ trả các giá trị này, nếu không rõ để null):
-- matchType: 1 trong ${VALID_MATCH_TYPES.join(", ")} (Tìm đối=tìm đối thủ, Thiếu người=cần/thiếu người vào kèo, Có sân trống=có sân cho thuê/rảnh, Tìm đội=cá nhân rảnh tìm đội). Ví dụ "cần tìm kèo" = FIND_OPPONENT.
+- matchType: 1 trong ${VALID_MATCH_TYPES.join(", ")} (Tìm đối=tìm đối thủ, Thiếu người=cần/thiếu người vào kèo, Nội bộ=trận nội bộ đội). Ví dụ "cần tìm kèo" = FIND_OPPONENT.
 - fieldType: 1 trong ${VALID_FIELD_TYPES.join(", ")} ("sân 5"=F5, "sân 7"=F7, "sân 11"=F11).
 - skillTiers: mảng trong ${VALID_SKILL_TIERS.join(", ")} (label: ${skillMap}). Ví dụ "trình Yếu" -> ["WEAK"].
 - area: 1 trong ${VALID_AREAS.join(", ")} (label: ${areaMap}). "sân trung tâm" -> "trung_tam". Nếu text nhắc tên khác/không rõ -> null.
 - timeSlots: mảng key slot (${slotMap}). Chỉ dùng giá trị này. "19h30" -> ["1930"], "16h30 và 20h30" -> ["1630","2030"]. Nếu text không có giờ rõ -> null.
 - hasField: boolean true nếu text nói "đã có sân"/"có sẵn sân"/"đã đặt sân", false nếu "chưa có sân"/"tìm sân".
-- note: tóm tắt ngắn gọn nội dung kèo (tiếng Việt), kèm "[N cầu rảnh] " ở đầu nếu matchType=LOOKING_FOR_TEAM và text nói số cầu rảnh (N=1 hoặc 2).
+- note: tóm tắt ngắn gọn nội dung kèo (tiếng Việt).
 
 Trả JSON đúng schema, KHÔNG Markdown, KHÔNG giải thích. Text gốc:
 """

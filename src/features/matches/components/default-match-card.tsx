@@ -11,7 +11,7 @@ import {
 } from "./card-shared";
 import { areaLabels } from "../labels";
 
-// Layout mặc định (trắng) — cho NEED_PLAYERS, FIELD_AVAILABLE.
+// Layout mặc định (trắng).
 export function DefaultMatchCard({ match }: { match: MatchListItem }) {
   const isLive = match.status === "MATCHED" || match.status === "CONFIRMED";
 

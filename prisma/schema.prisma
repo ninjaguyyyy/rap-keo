@@ -55,8 +55,6 @@ enum TeamRole {
 enum MatchType {
   FIND_OPPONENT
   NEED_PLAYERS
-  FIELD_AVAILABLE
-  LOOKING_FOR_TEAM
   // Trận nội bộ team tự tạo (A vs B, không đối thủ ngoài, không lên /matches).
   INTERNAL
 }
