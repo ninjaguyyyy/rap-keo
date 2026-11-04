@@ -2,6 +2,40 @@
 
 This document defines the contract for crawler/AI agents that ingest Facebook posts into Phủi League.
 
+## Change Log (Crawler-facing)
+
+### 2026-11-03
+
+- Type: `ADDITIVE`
+- Change:
+  - Added optional `normalized.playersNeeded` (`1..30`).
+  - Server persists this to `matches.needed_players` when `normalized.matchType = NEED_PLAYERS` or `INTERNAL`.
+- Crawler action required:
+  - When parser detects "thiếu/cần thêm N người", send `normalized.playersNeeded = N`.
+  - Preferred: send `playersNeeded` for `NEED_PLAYERS` and `INTERNAL` when value is known.
+  - For other types, server ignores this field.
+
+### 2026-11-03 (Earlier)
+
+- Type: `BREAKING`
+- Change:
+  - Deprecated match types were removed from accepted ingest values:
+    - `FIELD_AVAILABLE`
+    - `LOOKING_FOR_TEAM`
+- Crawler action required:
+  - Stop emitting those two values immediately.
+  - Map legacy intents to supported values:
+    - `FIELD_AVAILABLE` -> `FIND_OPPONENT`
+    - `LOOKING_FOR_TEAM` -> `NEED_PLAYERS` (when intent is missing players) or `FIND_OPPONENT` (when intent is finding opponent).
+  - Expect per-item rejection codes:
+    - `DEPRECATED_MATCH_TYPE:FIELD_AVAILABLE`
+    - `DEPRECATED_MATCH_TYPE:LOOKING_FOR_TEAM`
+
+### Compatibility Note
+
+- If crawler and API versions are temporarily out of sync, server-side validation will reject incompatible rows per item instead of failing the whole batch.
+- Keep batch size <= 50 and monitor `results[].status` / `results[].reason` for rollout safety.
+
 ## Endpoint
 
 - Method: `POST`
@@ -43,6 +77,7 @@ Required server env vars:
         "fieldType": "F7",
         "skillTiers": ["AVERAGE", "ABOVE_AVERAGE"],
         "playTimes": ["2026-11-02T19:30:00+07:00"],
+        "playersNeeded": 2,
         "area": "Go Vap",
         "note": "San 7, da co san"
       },
@@ -67,6 +102,7 @@ Required server env vars:
     - `fieldType`: one of `F5 | F7 | F11`
     - `skillTiers`: array, min `1`, max `8`, values from `MatchSkillTier`
     - `playTimes`: array, min `1`, max `10`, ISO datetime with offset
+    - `playersNeeded`: optional int `1..30`, meaningful when `matchType = NEED_PLAYERS | INTERNAL`
     - `teamName | area | note`: optional
   - `confidence`: optional number `0..1`
 
@@ -123,7 +159,7 @@ Core source metadata:
 Match data:
 
 - `creator_id = first ADMIN user (ordered by created_at ascending)`
-- `match_type`, `field_type`, `skill_tiers`, `play_times`, `area`, `note`
+- `match_type`, `field_type`, `skill_tiers`, `play_times`, `needed_players`, `area`, `note`
 - `status = OPEN`
 
 ## Success Response

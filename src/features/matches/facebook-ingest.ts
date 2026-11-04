@@ -35,6 +35,7 @@ const normalizedPayloadSchema = z.object({
     .min(1)
     .max(8),
   playTimes: z.array(isoDateTimeSchema).min(1).max(10),
+  playersNeeded: z.number().int().min(1).max(30).optional(),
   area: z.string().trim().min(1).max(120).optional(),
   note: z.string().trim().min(1).max(1000).optional(),
 });

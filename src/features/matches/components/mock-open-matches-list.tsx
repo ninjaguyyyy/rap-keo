@@ -144,7 +144,7 @@ export function MockOpenMatchesList({
                       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                         <TeamNameWithLogo name={match.homeTeam} logo={match.homeLogo} align="home" />
                         <div className="min-w-16 text-center">
-                          {match.matchType === "NEED_PLAYERS" && (match.neededPlayers ?? 0) > 0 ? (
+                          {(match.matchType === "NEED_PLAYERS" || match.matchType === "INTERNAL") && (match.neededPlayers ?? 0) > 0 ? (
                             <span className="mb-1 inline-flex items-center rounded bg-brand px-1.5 py-1 text-[10px] font-bold leading-none text-white">
                               Thiếu người: {match.neededPlayers}
                             </span>

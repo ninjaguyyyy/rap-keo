@@ -52,14 +52,6 @@ const kickoffFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
 });
 
-function parsePlayersCount(note: string | null): number | undefined {
-  if (!note) return undefined;
-  const matched = note.match(/\[(\d+)\s*cầu rảnh\]/i);
-  if (!matched) return undefined;
-  const value = Number(matched[1]);
-  return Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
 function kickoffToMinutes(value: string): number {
   const [hourRaw, minuteRaw] = value.split(":");
   const hour = Number(hourRaw);
@@ -97,7 +89,7 @@ function toOpenMatch(match: MatchRow, preferUpcoming: boolean): OpenMatch | null
     homeTeam: sourceHomeName,
     awayTeam: undefined,
     matchType,
-    neededPlayers: parsePlayersCount(match.note),
+    neededPlayers: match.neededPlayers ?? undefined,
     kickoff,
     fieldType: fieldTypeLabels[match.fieldType],
     district,

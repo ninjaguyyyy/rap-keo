@@ -106,6 +106,11 @@ export async function POST(request: Request) {
     }
 
     const payload = parsedItem.data;
+    const neededPlayers =
+      payload.normalized.matchType === "NEED_PLAYERS"
+      || payload.normalized.matchType === "INTERNAL"
+        ? (payload.normalized.playersNeeded ?? null)
+        : null;
     const resolvedTeam = resolveSourceTeamName({
       normalizedTeamName: payload.normalized.teamName,
       rawText: payload.rawText,
@@ -133,6 +138,7 @@ export async function POST(request: Request) {
           fieldType: payload.normalized.fieldType,
           skillTiers: payload.normalized.skillTiers,
           playTimes: payload.normalized.playTimes,
+          neededPlayers,
           area: payload.normalized.area ?? null,
           note: payload.normalized.note ?? null,
           status: "OPEN",

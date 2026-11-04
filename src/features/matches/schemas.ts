@@ -69,8 +69,20 @@ export const createMatchSchema = z.object({
   hasField: z.boolean(),
   skillTiers: skillTiersSchema,
   playTimes: playTimesSchema,
+  neededPlayers: z.number().int().min(1, "Thiếu người tối thiểu là 1").max(30, "Thiếu người tối đa là 30").optional(),
   area: areaSchema,
   note: z.string().trim().max(500, "Ghi chú tối đa 500 ký tự").optional(),
+}).superRefine((data, ctx) => {
+  if (
+    (data.matchType === MatchType.NEED_PLAYERS || data.matchType === MatchType.INTERNAL)
+    && data.neededPlayers == null
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Nhập số cầu còn thiếu",
+      path: ["neededPlayers"],
+    });
+  }
 });
 
 export type CreateMatchInput = z.infer<typeof createMatchSchema>;
@@ -80,6 +92,21 @@ export type CreateMatchState = {
   ok?: boolean;
   error?: string;
   fieldErrors?: Partial<Record<keyof CreateMatchInput, string>>;
+};
+
+export const updateMatchNeededPlayersSchema = z.object({
+  matchId: z.string().uuid(),
+  neededPlayers: z
+    .number()
+    .int("Số cầu còn thiếu không hợp lệ")
+    .min(1, "Thiếu người tối thiểu là 1")
+    .max(30, "Thiếu người tối đa là 30"),
+});
+
+export type UpdateMatchNeededPlayersState = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<"neededPlayers", string>>;
 };
 
 // Cập nhật kết quả trận (popup trên match detail). Tỷ số 2 bên + danh sách bàn

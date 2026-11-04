@@ -7,10 +7,12 @@ import { requireUser, requireAdmin } from "@/lib/session";
 import { buildBalancedInternalTeamSides } from "./internal-squad-balance";
 import {
   createMatchSchema,
+  updateMatchNeededPlayersSchema,
   swapInternalSquadSidesSchema,
   updateInternalSquadSideSchema,
   updateMatchResultSchema,
   type CreateMatchState,
+  type UpdateMatchNeededPlayersState,
   type UpdateMatchResultState,
 } from "./schemas";
 import { parseMatchFromText, type MatchDraft } from "./ai-parser";
@@ -39,6 +41,12 @@ export async function createMatch(
     hasField: hasFieldInput,
     skillTiers: skillRaw,
     playTimes: playTimesRaw,
+    neededPlayers: (() => {
+      const raw = String(formData.get("neededPlayers") ?? "").trim();
+      if (!raw) return undefined;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : undefined;
+    })(),
     area: formData.get("area"),
     note: formData.get("note"),
   });
@@ -57,7 +65,7 @@ export async function createMatch(
     return { fieldErrors };
   }
 
-  const { matchType, fieldType, hasField, skillTiers, playTimes, area, note } =
+  const { matchType, fieldType, hasField, skillTiers, playTimes, neededPlayers, area, note } =
     parsed.data;
 
   try {
@@ -69,6 +77,10 @@ export async function createMatch(
         fieldType,
         skillTiers,
         playTimes,
+        neededPlayers:
+          matchType === "NEED_PLAYERS" || matchType === "INTERNAL"
+            ? (neededPlayers ?? null)
+            : null,
         area,
         note: note || null,
         status: "OPEN",
@@ -87,6 +99,84 @@ export async function createMatch(
   } catch (err) {
     console.error("createMatch error:", err);
     return { error: "Không tạo được kèo. Thử lại nhé." };
+  }
+}
+
+export async function updateMatchNeededPlayers(
+  _prev: UpdateMatchNeededPlayersState,
+  formData: FormData,
+): Promise<UpdateMatchNeededPlayersState> {
+  const user = await requireUser();
+
+  const rawNeededPlayers = String(formData.get("neededPlayers") ?? "").trim();
+  const parsed = updateMatchNeededPlayersSchema.safeParse({
+    matchId: formData.get("matchId"),
+    neededPlayers: Number(rawNeededPlayers),
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: UpdateMatchNeededPlayersState["fieldErrors"] = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (key === "neededPlayers" && !fieldErrors.neededPlayers) {
+        fieldErrors.neededPlayers = issue.message;
+      }
+    }
+    return {
+      fieldErrors,
+      error: Object.keys(fieldErrors).length === 0 ? "Dữ liệu không hợp lệ." : undefined,
+    };
+  }
+
+  const { matchId, neededPlayers } = parsed.data;
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: {
+      id: true,
+      creatorId: true,
+      teamId: true,
+      matchType: true,
+      team: {
+        select: {
+          ownerId: true,
+          members: {
+            where: { userId: user.id },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!match) {
+    return { error: "Kèo không tồn tại." };
+  }
+  if (match.matchType !== "NEED_PLAYERS" && match.matchType !== "INTERNAL") {
+    return { error: "Chỉ kèo thiếu người hoặc nội bộ mới cập nhật số cầu thiếu." };
+  }
+
+  const isCreator = match.creatorId === user.id;
+  const isTeamOwner = match.team?.ownerId === user.id;
+  const isTeamMember = (match.team?.members.length ?? 0) > 0;
+  if (!isCreator && !isTeamOwner && !isTeamMember) {
+    return { error: "Bạn không có quyền sửa kèo này." };
+  }
+
+  try {
+    await db.match.update({
+      where: { id: match.id },
+      data: { neededPlayers },
+    });
+    revalidatePath("/matches");
+    revalidatePath("/my-matches");
+    revalidatePath(`/matches/${match.id}`);
+    if (match.teamId) {
+      revalidatePath(`/teams/${match.teamId}`);
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("updateMatchNeededPlayers error:", err);
+    return { error: "Không cập nhật được số cầu còn thiếu. Thử lại nhé." };
   }
 }
 

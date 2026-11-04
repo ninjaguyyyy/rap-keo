@@ -101,6 +101,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
   const [fieldTypeValue, setFieldTypeValue] = useState<string>("F7");
   // note controlled (cho AI parser set).
   const [noteValue, setNoteValue] = useState<string>("");
+  const [neededPlayersValue, setNeededPlayersValue] = useState<string>("");
   // Track lần parse để tránh apply lại cùng draft sau khi user đã sửa.
   const [lastParsedInput, setLastParsedInput] = useState<string | null>(null);
 
@@ -161,6 +162,9 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
       setTimeSlots(draft.timeSlots as TimeSlot[]);
     }
     if (typeof draft.hasField === "boolean") setHasField(draft.hasField);
+    if (typeof draft.neededPlayers === "number") {
+      setNeededPlayersValue(String(draft.neededPlayers));
+    }
     // draft.area có thể là enum key (từ AI: "trung_tam") -> map sang label "Sân Trung Tâm".
     // Nếu không match key -> dùng nguyên text (free text).
     if (draft.area) setArea(areaLabels[draft.area] ?? draft.area);
@@ -249,6 +253,33 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
           </p>
         ) : null}
       </div>
+
+      {matchType === "NEED_PLAYERS" || matchType === "INTERNAL" ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="neededPlayers">Thiếu bao nhiêu cầu?</Label>
+          <Input
+            id="neededPlayers"
+            name="neededPlayers"
+            type="number"
+            min={1}
+            max={30}
+            step={1}
+            inputMode="numeric"
+            required
+            value={neededPlayersValue}
+            onChange={(e) => setNeededPlayersValue(e.target.value)}
+            placeholder="VD: 2"
+            className="h-11 text-base"
+          />
+          {state.fieldErrors?.neededPlayers ? (
+            <p className="text-sm text-destructive">
+              {state.fieldErrors.neededPlayers}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Nhập số cầu còn thiếu để ghép đủ đội hình.</p>
+          )}
+        </div>
+      ) : null}
 
       {/* Loại sân */}
       <div className="flex flex-col gap-1.5">

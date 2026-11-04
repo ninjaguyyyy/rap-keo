@@ -23,6 +23,7 @@ export type MatchDraft = {
   skillTiers?: MatchSkillTier[];
   area?: keyof typeof areaLabels;
   timeSlots?: string[]; // key slot (vd "1930") — form map thành playTimes
+  neededPlayers?: number;
   hasField?: boolean;
   note?: string;
 };
@@ -62,6 +63,7 @@ Quy ước giá trị hợp lệ (CHỈ trả các giá trị này, nếu không
 - skillTiers: mảng trong ${VALID_SKILL_TIERS.join(", ")} (label: ${skillMap}). Ví dụ "trình Yếu" -> ["WEAK"].
 - area: 1 trong ${VALID_AREAS.join(", ")} (label: ${areaMap}). "sân trung tâm" -> "trung_tam". Nếu text nhắc tên khác/không rõ -> null.
 - timeSlots: mảng key slot (${slotMap}). Chỉ dùng giá trị này. "19h30" -> ["1930"], "16h30 và 20h30" -> ["1630","2030"]. Nếu text không có giờ rõ -> null.
+- neededPlayers: số nguyên 1..30 khi text nói thiếu người/cần thêm người (vd "thiếu 2" -> 2). Nếu không rõ -> null.
 - hasField: boolean true nếu text nói "đã có sân"/"có sẵn sân"/"đã đặt sân", false nếu "chưa có sân"/"tìm sân".
 - note: tóm tắt ngắn gọn nội dung kèo (tiếng Việt).
 
@@ -116,6 +118,10 @@ function coerceDraft(raw: unknown): MatchDraft {
     );
     if (draft.timeSlots.length === 0) delete draft.timeSlots;
   }
+  if (typeof obj.neededPlayers === "number") {
+    const value = Math.trunc(obj.neededPlayers);
+    if (value >= 1 && value <= 30) draft.neededPlayers = value;
+  }
   if (typeof obj.hasField === "boolean") draft.hasField = obj.hasField;
   if (typeof obj.note === "string" && obj.note.trim()) draft.note = obj.note.trim();
 
@@ -151,6 +157,7 @@ export async function parseMatchFromText(text: string): Promise<MatchDraft> {
             skillTiers: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
             area: { type: Type.STRING, nullable: true },
             timeSlots: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
+            neededPlayers: { type: Type.NUMBER, nullable: true },
             hasField: { type: Type.BOOLEAN, nullable: true },
             note: { type: Type.STRING, nullable: true },
           },

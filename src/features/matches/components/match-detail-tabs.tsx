@@ -22,6 +22,7 @@ import { UpdateMatchResultDialog } from "./update-match-result-dialog";
 import { MvpVotePanel } from "./mvp-vote-panel";
 import { DeleteMatchButton } from "./delete-match-button";
 import { MatchSquadPanel } from "./match-squad-panel";
+import { EditNeededPlayersDialog } from "./edit-needed-players-dialog";
 
 type TabId = "overview" | "mvp" | "squad" | "stats";
 
@@ -260,6 +261,12 @@ export function MatchDetailTabs({
                 <DeleteMatchButton
                   matchId={match.id}
                   afterDeleteHref={match.teamId ? `/teams/${match.teamId}` : "/matches"}
+                />
+              ) : null}
+              {canEdit && (match.matchType === "NEED_PLAYERS" || match.matchType === "INTERNAL") ? (
+                <EditNeededPlayersDialog
+                  matchId={match.id}
+                  currentValue={match.neededPlayers}
                 />
               ) : null}
               {canEdit ? <UpdateMatchResultDialog match={match} members={resultMembers} /> : null}

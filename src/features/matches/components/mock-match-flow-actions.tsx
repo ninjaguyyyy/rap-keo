@@ -15,6 +15,7 @@ type MockMatchFlowActionsProps = Readonly<{
 
 export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowActionsProps) {
   const hasPhone = Boolean(phone.trim());
+  const hasFbLink = Boolean(fbLink.trim());
   const [flowState, setFlowState] = useState<MatchFlowState>("OPEN");
 
   const hasContacted = flowState !== "OPEN";
@@ -81,16 +82,20 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-center">
-        <span
-          className={cn(
-            "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold leading-none",
-            statusMeta.className,
-          )}
+      {hasFbLink ? (
+        <a
+          href={fbLink}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-8 w-full items-center justify-center gap-2 rounded-full border border-brand text-xs font-medium text-brand"
         >
-          {statusLabel}
-        </span>
-      </div>
+          <ExternalLinkIcon className="size-3.5" />
+          <span>Link bài đăng FB</span>
+          <span className="inline-flex items-center justify-center rounded-full bg-brand px-1.5 py-[3px] text-[9px] font-bold leading-none text-white">
+            Open
+          </span>
+        </a>
+      ) : null}
 
       {hasPhone ? (
         <a

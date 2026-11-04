@@ -287,6 +287,8 @@ model Match {
   location    Unsupported("geography(Point, 4326)")?
   // Mảng giờ đá: 1 kèo có thể mở nhiều giờ trong ngày (vd 18h30 + 20h30).
   playTimes   DateTime[]                             @map("play_times")
+  // Số lượng cầu thủ còn thiếu (chỉ dùng cho matchType NEED_PLAYERS).
+  neededPlayers Int?                                 @map("needed_players")
   note        String?
   status      MatchStatus                            @default(OPEN)
   // Tỷ số trận (ghi khi trận COMPLETED). home = đội tạo/đại diện kèo (teamId),

@@ -76,6 +76,7 @@
 - area (string, nullable)                 -- khu vực mong muốn
 - location (geography Point, nullable)     -- để filter "gần"
 - play_times (array timestamp)            -- thời gian đá (1 kèo có thể nhiều giờ trong ngày)
+- needed_players (int, nullable)          -- số cầu còn thiếu (chỉ cho NEED_PLAYERS)
 - note (text, nullable)
 - status (enum: OPEN, MATCHED, CONFIRMED, COMPLETED, CANCELLED, EXPIRED)
 - squad_seeded_at (timestamp, nullable)   -- đánh dấu đã seed đội hình mặc định 1 lần
