@@ -16,6 +16,13 @@ type ForgotPasswordPayload = {
   otp?: string;
 };
 
+type MatchFlowReviewPayload = {
+  kind?: string;
+  matchId?: string;
+  action?: string;
+  fromUserName?: string | null;
+};
+
 type PresentedNotification = {
   id: string;
   title: string;
@@ -42,6 +49,24 @@ export function presentNotification(record: NotificationRecord): PresentedNotifi
   };
 
   // Forgot-password OTP (admin only) — payload.kind làm phân loại.
+  if (
+    record.type === "MATCH_REQUEST" &&
+    isMatchFlowReviewPayload(record.payload)
+  ) {
+    const actionText =
+      record.payload.action === "REPORT"
+        ? "report đội đã có kèo"
+        : "xác nhận đã chốt";
+    const actor = record.payload.fromUserName?.trim() || "Một người dùng";
+    return {
+      ...base,
+      title: "Yêu cầu duyệt trạng thái kèo",
+      description: `${actor} vừa ${actionText}.`,
+      href: `/matches/${record.payload.matchId}`,
+      icon: HandHelping,
+    };
+  }
+
   if (
     record.type === "MATCH_REQUEST" &&
     isForgotPasswordPayload(record.payload)
@@ -91,4 +116,14 @@ function isForgotPasswordPayload(payload: unknown): payload is ForgotPasswordPay
   if (!payload || typeof payload !== "object") return false;
   const kind = (payload as { kind?: unknown }).kind;
   return typeof kind === "string" && kind.length > 0;
+}
+
+function isMatchFlowReviewPayload(payload: unknown): payload is MatchFlowReviewPayload {
+  if (!payload || typeof payload !== "object") return false;
+  const value = payload as MatchFlowReviewPayload;
+  return (
+    value.kind === "MATCH_FLOW_REVIEW"
+    && typeof value.matchId === "string"
+    && value.matchId.length > 0
+  );
 }

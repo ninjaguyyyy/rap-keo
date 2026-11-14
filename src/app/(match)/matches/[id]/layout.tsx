@@ -51,6 +51,12 @@ export default async function MatchLayout({
     : firstPlayTime
       ? formatPlayTime(firstPlayTime)
       : "Chưa lên lịch";
+  const isRecruitingMatch = match.matchType === "NEED_PLAYERS" || match.matchType === "INTERNAL";
+  const hasNeededPlayersCount = typeof match.neededPlayers === "number" && match.neededPlayers > 0;
+  let neededPlayersLabel: string | null = null;
+  if (isRecruitingMatch) {
+    neededPlayersLabel = hasNeededPlayersCount ? `Tuyển ${match.neededPlayers} cầu` : "Tuyển cầu";
+  }
 
   return (
     <div className="min-h-dvh bg-surface-muted">
@@ -98,6 +104,9 @@ export default async function MatchLayout({
                 <p className="mt-0.5 text-[11px] font-semibold tracking-wide text-ink-muted">
                   {scoreMetaLabel}
                 </p>
+                {neededPlayersLabel ? (
+                  <p className="mt-0.5 text-[11px] font-semibold tracking-wide text-brand">{neededPlayersLabel}</p>
+                ) : null}
               </div>
             </div>
           </div>

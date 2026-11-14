@@ -132,11 +132,10 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
 
   useEffect(() => {
     if (state.ok) {
-      // Trong modal -> đóng modal rồi redirect sang "Kèo của tôi" để user thấy kèo
-      // vừa đăng + trạng thái. Dùng fallback /my-matches cả khi không có onSuccess
-      // (form dùng ngoài modal) vì đây là đích tự nhiên sau khi tạo kèo.
+      // Trong modal -> đóng modal rồi về /matches (page hiện tại) để thấy kèo mới
+      // và trạng thái/FAB. Dùng fallback này cả khi không có onSuccess.
       if (onSuccess) onSuccess();
-      router.push("/my-matches");
+      router.push("/matches");
     }
   }, [state, router, onSuccess]);
 

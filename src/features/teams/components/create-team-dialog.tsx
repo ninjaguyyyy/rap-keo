@@ -19,7 +19,12 @@ export function CreateTeamDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={<Button className="h-11 shrink-0 px-4 text-sm font-semibold" />}
+        render={
+          <Button
+            variant="outline"
+            className="h-11 shrink-0 border-white/50 bg-transparent px-4 text-sm font-semibold text-white hover:bg-white/12 hover:text-white"
+          />
+        }
       >
         <svg
           width="16"

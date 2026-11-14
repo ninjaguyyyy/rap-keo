@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { CreateMatchDialog } from "./create-match-dialog";
 
 export type HeroTabKey = "open" | "all";
 
@@ -19,7 +20,13 @@ export function MatchesHeroBanner({
   className,
   activeTab = "open",
   tabs = DEFAULT_HERO_TABS,
-}: Readonly<{ className?: string; activeTab?: HeroTabKey; tabs?: HeroTabItem[] }>) {
+  isAuthed = false,
+}: Readonly<{
+  className?: string;
+  activeTab?: HeroTabKey;
+  tabs?: HeroTabItem[];
+  isAuthed?: boolean;
+}>) {
   return (
     <section
       className={cn(
@@ -55,12 +62,12 @@ export function MatchesHeroBanner({
             >
               Ráp kèo nhanh
             </Link>
-            <Link
-              href="/matches"
-              className="inline-flex w-fit items-center rounded-full border border-white/65 bg-white/16 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/25"
-            >
-              Tạo kèo chờ đối
-            </Link>
+            <CreateMatchDialog
+              isAuthed={isAuthed}
+              triggerLabel="Tạo kèo"
+              triggerVariant="outline"
+              triggerClassName="h-auto rounded-full border border-white/65 bg-white/16 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+            />
           </div>
         </div>
       </div>

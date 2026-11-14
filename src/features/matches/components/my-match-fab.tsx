@@ -2,9 +2,9 @@
 
 // MyMatchFab — float button dính dưới-phải trên /matches.
 // Chỉ hiện khi user có kèo OPEN (match != null). Click -> popover show tóm tắt
-// trạng thái kèo ưu tiên + action (accept/reject inline / gỡ kèo) + link /my-matches.
+// trạng thái kèo ưu tiên + action (accept/reject inline / gỡ kèo) + link /matches.
 //
-// Reuse MatchStatusPanel (giống MyMatchCard) cho phần status + action.
+// Reuse MatchStatusPanel cho phần status + action.
 import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { MyMatchItem } from "../queries";
@@ -93,10 +93,10 @@ export function MyMatchFab({ match }: { match: MyMatchItem | null }) {
             <MatchStatusPanel match={match} />
           </div>
           <Link
-            href="/my-matches"
+            href="/matches"
             className="mt-2 block text-center text-xs font-semibold text-brand hover:text-brand-hover hover:underline"
           >
-            Xem tất cả trong “Kèo của tôi” ›
+            Xem tất cả kèo ›
           </Link>
         </PopoverContent>
       </Popover>

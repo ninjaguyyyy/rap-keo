@@ -18,15 +18,16 @@ import type { SkillTier } from "@/generated/prisma/enums";
 
 export function EditTeamDialog({
   team,
-}: {
+}: Readonly<{
   team: {
     id: string;
     name: string;
     skillTier: SkillTier;
+    primaryColor?: string | null;
     homeArea?: string | null;
     coverUrl?: string | null;
   };
-}) {
+}>) {
   const [open, setOpen] = useState(false);
 
   return (

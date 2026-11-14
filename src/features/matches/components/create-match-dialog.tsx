@@ -20,10 +20,16 @@ import { MatchForm } from "./match-form";
 export function CreateMatchDialog({
   isAuthed,
   isAdmin = false,
-}: {
+  triggerLabel = "Tạo kèo",
+  triggerClassName,
+  triggerVariant = "default",
+}: Readonly<{
   isAuthed: boolean;
   isAdmin?: boolean;
-}) {
+  triggerLabel?: string;
+  triggerClassName?: string;
+  triggerVariant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link";
+}>) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +37,10 @@ export function CreateMatchDialog({
       {/* Trigger: nút "Tạo kèo" màu brand, vùng chạm h-11 (DESIGN.md). */}
       <DialogTrigger
         render={
-          <Button className="h-11 shrink-0 px-4 text-sm font-semibold" />
+          <Button
+            variant={triggerVariant}
+            className={triggerClassName ?? "h-11 shrink-0 px-4 text-sm font-semibold"}
+          />
         }
       >
         <svg
@@ -48,7 +57,7 @@ export function CreateMatchDialog({
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Tạo kèo
+        {triggerLabel}
       </DialogTrigger>
       {/* max-h + overflow-y-auto để form dài scroll được trên mobile. */}
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">

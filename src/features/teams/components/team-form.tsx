@@ -20,6 +20,11 @@ import { createTeam } from "../actions";
 import { AreaCombobox } from "@/features/matches/components/area-combobox";
 import type { TeamFormState } from "../schemas";
 import type { SkillTier } from "@/generated/prisma/enums";
+import {
+  DEFAULT_TEAM_PRIMARY_COLOR,
+  teamPrimaryColorOptions,
+  type TeamPrimaryColor,
+} from "../colors";
 
 const initialState: TeamFormState = {};
 
@@ -31,6 +36,7 @@ type TeamFormProps = {
     id: string;
     name: string;
     skillTier: SkillTier;
+    primaryColor?: string | null;
     homeArea?: string | null;
     coverUrl?: string | null;
   };
@@ -38,7 +44,7 @@ type TeamFormProps = {
   onSuccess?: () => void;
 };
 
-export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
+export function TeamForm({ team, action, onSuccess }: Readonly<TeamFormProps>) {
   const [state, formAction, pending] = useActionState(
     action ?? createTeam,
     initialState,
@@ -48,12 +54,24 @@ export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
   const [skillTier, setSkillTier] = useState<SkillTier>(
     team?.skillTier ?? "AVERAGE",
   );
+  const [primaryColor, setPrimaryColor] = useState<TeamPrimaryColor>(
+    (team?.primaryColor as TeamPrimaryColor | undefined) ??
+      DEFAULT_TEAM_PRIMARY_COLOR,
+  );
   const [homeArea, setHomeArea] = useState<string>(team?.homeArea ?? "");
 
   // Tạo/sửa xong -> đóng dialog. Ở lại /teams; revalidatePath làm mới list.
   useEffect(() => {
     if (state.ok) onSuccess?.();
   }, [state, onSuccess]);
+
+  let submitLabel = "Tạo đội";
+  if (team) {
+    submitLabel = "Lưu đội";
+  }
+  if (pending) {
+    submitLabel = "Đang lưu...";
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -105,6 +123,49 @@ export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
         ) : null}
       </div>
 
+      {/* Màu chủ đạo card đội */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="team-primary-color">Màu chủ đạo</Label>
+        <input type="hidden" name="primaryColor" value={primaryColor} />
+        <Select
+          value={primaryColor}
+          onValueChange={(v) => setPrimaryColor(v as TeamPrimaryColor)}
+        >
+          <SelectTrigger id="team-primary-color" className="w-full">
+            <SelectValue>
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className="h-3 w-3 rounded-full border border-line"
+                  style={{
+                    backgroundColor:
+                      teamPrimaryColorOptions.find((option) => option.value === primaryColor)
+                        ?.hex ?? "#37003C",
+                  }}
+                />
+                {teamPrimaryColorOptions.find((option) => option.value === primaryColor)
+                  ?.label ?? "Tím đậm"}
+              </span>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {teamPrimaryColorOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className="h-3 w-3 rounded-full border border-line"
+                    style={{ backgroundColor: option.hex }}
+                  />
+                  {option.label}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {state.fieldErrors?.primaryColor ? (
+          <p className="text-sm text-destructive">{state.fieldErrors.primaryColor}</p>
+        ) : null}
+      </div>
+
       {/* Khu vực (tùy chọn) — autocomplete gợi ý 4 sân + cho nhập free text.
           Dùng chung AreaCombobox với match (filter theo label, submit text qua
           hidden input name="homeArea"). */}
@@ -150,7 +211,7 @@ export function TeamForm({ team, action, onSuccess }: TeamFormProps) {
       ) : null}
 
       <Button type="submit" disabled={pending} className="h-11 w-full text-base">
-        {pending ? "Đang lưu..." : team ? "Lưu đội" : "Tạo đội"}
+        {submitLabel}
       </Button>
     </form>
   );

@@ -243,4 +243,17 @@
   .spotlight-team {
     @apply bg-type-team-spotlight text-white;
   }
+
+  /*
+   * Clubs hero banner (teams list): nền tím đậm + dải chéo dạng broadcast.
+   * Dùng cho card đội để khớp mockup người dùng cung cấp.
+   */
+  .clubs-hero-banner {
+    background-image:
+      radial-gradient(120% 90% at 92% 50%, rgba(120, 72, 145, 0.34) 0%, rgba(120, 72, 145, 0) 55%),
+      linear-gradient(112deg, #1a012c 0%, #23003a 45%, #320a4f 100%),
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 56px, rgba(255, 255, 255, 0) 56px 130px),
+      repeating-linear-gradient(135deg, rgba(10, 0, 22, 0.22) 0 34px, rgba(10, 0, 22, 0) 34px 130px);
+    background-blend-mode: screen, normal, normal, multiply;
+  }
 }

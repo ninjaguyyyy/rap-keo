@@ -86,6 +86,8 @@ export default async function MatchDetailPage({
         homeTeam={homeTeam}
         awayTeam={awayTeam}
         kickoff={kickoff}
+        matchType={match.matchType}
+        neededPlayers={match.neededPlayers}
         dayLabel={dayLabel}
         fieldTypeLabel={fieldTypeLabels[match.fieldType]}
         district={areaLabel}

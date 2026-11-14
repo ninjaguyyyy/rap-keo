@@ -2,6 +2,10 @@
 import { z } from "zod";
 import { FieldType, SkillTier } from "@/generated/prisma/enums";
 import { phoneSchema } from "@/features/auth/schemas";
+import {
+  DEFAULT_TEAM_PRIMARY_COLOR,
+  teamPrimaryColorValues,
+} from "./colors";
 
 // Trình độ đội: đúng 7 mức của SkillTier (khác Match — Match có thêm ANY).
 export const teamSkillTierEnum = z.enum([
@@ -22,6 +26,10 @@ export const createTeamSchema = z.object({
     .min(2, "Tên đội tối thiểu 2 ký tự")
     .max(50, "Tên đội tối đa 50 ký tự"),
   skillTier: teamSkillTierEnum,
+  primaryColor: z.preprocess(
+    (value) => (typeof value === "string" ? value : undefined),
+    z.enum(teamPrimaryColorValues).default(DEFAULT_TEAM_PRIMARY_COLOR),
+  ),
   homeArea: z.string().trim().max(120, "Khu vực tối đa 120 ký tự").optional(),
 });
 

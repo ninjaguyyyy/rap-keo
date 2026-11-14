@@ -7,8 +7,8 @@ export default function MainLayout({
 }) {
   return (
     <div className="min-h-dvh bg-surface-muted">
-      <main className="px-4 py-4">
-        <div className="mx-auto max-w-md">{children}</div>
+      <main className="px-2">
+        {children}
       </main>
     </div>
   );

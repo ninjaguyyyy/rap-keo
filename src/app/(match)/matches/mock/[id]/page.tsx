@@ -20,6 +20,8 @@ export default async function MockMatchDetailPage({ params }: Readonly<PageProps
       homeTeam={match.homeTeam}
       awayTeam={match.awayTeam ?? "Đội của bạn"}
       kickoff={match.kickoff}
+      matchType={match.matchType}
+      neededPlayers={match.neededPlayers}
       dayLabel={dayLabel}
       fieldTypeLabel={match.fieldType}
       district={match.district}

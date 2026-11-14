@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 
 const MENU_LINKS = [
   { href: "/matches", label: "Kèo đang mở" },
-  { href: "/my-matches", label: "Kèo của tôi" },
   { href: "/teams", label: "Đội của tôi" },
   { href: "/tournaments", label: "Giải đấu" },
   { href: "/my-tournaments", label: "Giải của tôi" },

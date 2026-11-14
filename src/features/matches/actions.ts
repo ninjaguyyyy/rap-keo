@@ -94,7 +94,6 @@ export async function createMatch(
       console.log("[createMatch] hasField=true (chưa lưu cột DB trong MVP này)");
     }
     revalidatePath("/matches");
-    revalidatePath("/my-matches");
     return { ok: true };
   } catch (err) {
     console.error("createMatch error:", err);
@@ -168,7 +167,6 @@ export async function updateMatchNeededPlayers(
       data: { neededPlayers },
     });
     revalidatePath("/matches");
-    revalidatePath("/my-matches");
     revalidatePath(`/matches/${match.id}`);
     if (match.teamId) {
       revalidatePath(`/teams/${match.teamId}`);
@@ -251,7 +249,6 @@ export async function acceptMatchRequest(
         data: { status: "REJECTED" },
       }),
     ]);
-    revalidatePath("/my-matches");
     revalidatePath("/matches");
     return { ok: true };
   } catch (err) {
@@ -274,7 +271,6 @@ export async function rejectMatchRequest(
       where: { id: req.id },
       data: { status: "REJECTED" },
     });
-    revalidatePath("/my-matches");
     return { ok: true };
   } catch (err) {
     console.error("rejectMatchRequest error:", err);
@@ -307,7 +303,6 @@ export async function cancelMyMatch(matchId: string): Promise<MatchActionState> 
         data: { status: "REJECTED" },
       }),
     ]);
-    revalidatePath("/my-matches");
     revalidatePath("/matches");
     return { ok: true };
   } catch (err) {
@@ -343,7 +338,6 @@ export async function deleteMatchByOwner(matchId: string): Promise<MatchActionSt
   try {
     await db.match.delete({ where: { id: matchId } });
     revalidatePath("/matches");
-    revalidatePath("/my-matches");
     revalidatePath(`/matches/${matchId}`);
     revalidatePath(`/teams/${match.teamId}`);
     return { ok: true };

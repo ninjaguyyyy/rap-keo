@@ -2,61 +2,75 @@
 
 // Card đội trong trang "Đội của tôi" (/teams). Avatar + tên + trình độ + khu vực.
 // Tên/avatar link sang /teams/[id]. Chủ đội thấy nút Sửa/Xóa ở footer.
+import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MapPinIcon } from "@/features/matches/components/card-shared";
 import { teamSkillTierLabels } from "../labels";
 import type { MyTeamItem } from "../queries";
 import { TeamAvatar } from "./team-avatar";
-import { EditTeamDialog } from "./edit-team-dialog";
-import { DeleteTeamButton } from "./delete-team-button";
+import { resolveTeamPrimaryColorHex } from "../colors";
 
 export function TeamCard({
   team,
-  canManage,
-}: {
+}: Readonly<{
   team: MyTeamItem;
-  canManage: boolean;
-}) {
+}>) {
+  const primaryColorHex = resolveTeamPrimaryColorHex(team.primaryColor);
+
   return (
-    <Card className="gap-0 border border-line/80 bg-linear-to-b from-surface to-surface-muted/50 p-0">
-      <div className="flex items-start gap-3 p-4">
-        {/* Vùng avatar + tên/khu vực link sang chi tiết. */}
-        <Link
-          href={`/teams/${team.id}`}
-          className="flex min-w-0 flex-1 items-start gap-3"
-        >
-          <TeamAvatar name={team.name} imageUrl={team.logoUrl} size="sm" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xl leading-tight font-black tracking-[-0.01em] text-ink">
+    <Card className="relative gap-0 overflow-hidden rounded-[1.8rem] border-0 p-0 shadow-[0_16px_28px_-22px_rgba(42,6,52,0.65)]">
+      <div className="absolute inset-0" aria-hidden="true">
+        <div
+          className="h-full w-full bg-[url('/scoreboard-header-light.svg')] bg-cover bg-center opacity-100"
+          style={{ backgroundColor: primaryColorHex }}
+        />
+      </div>
+      <div className="absolute inset-0 bg-black/12" aria-hidden="true" />
+
+      <div className="relative flex flex-col p-4 text-white">
+        <div className="flex items-start gap-3">
+          <Link href={`/teams/${team.id}`} className="inline-flex">
+            <TeamAvatar
+              name={team.name}
+              imageUrl={team.logoUrl}
+              size="lg"
+              className="h-20 w-20 rounded-full! border border-white/35 bg-white/10 p-2 shadow-sm"
+            />
+          </Link>
+        </div>
+
+        <div className="mt-3 min-w-0">
+          <Link href={`/teams/${team.id}`} className="block min-w-0">
+            <p className="truncate text-[24px] leading-[1.05] font-black tracking-[-0.02em] text-white drop-shadow-[0_2px_10px_rgba(24,0,30,0.35)]">
               {team.name}
             </p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <Badge variant="secondary">
-                {teamSkillTierLabels[team.skillTier]}
-              </Badge>
-              {canManage ? (
-                <Badge variant="outline">Đội trưởng</Badge>
-              ) : null}
-            </div>
-            {team.homeArea ? (
-              <p className="mt-1 inline-flex items-center gap-1 text-[13px] leading-5 text-ink-muted">
-                <MapPinIcon />
-                {team.homeArea}
-              </p>
-            ) : null}
+          </Link>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] leading-6 text-white/92">
+            <span className="inline-flex items-center gap-1.5">
+              <Image
+                src="/stadium.svg"
+                alt=""
+                width={22}
+                height={22}
+                className="opacity-95 invert"
+              />
+              {team.homeArea ?? "Chưa cập nhật khu vực"}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Image
+                src="/soccer-ball-variant.png"
+                alt=""
+                width={18}
+                height={18}
+                className="opacity-95 brightness-0 invert"
+              />
+              {teamSkillTierLabels[team.skillTier]}
+            </span>
           </div>
-        </Link>
+        </div>
       </div>
 
-      {/* Footer action — chỉ chủ đội. */}
-      {canManage ? (
-        <div className="flex justify-end gap-2 border-t border-line px-4 py-2.5">
-          <EditTeamDialog team={team} />
-          <DeleteTeamButton team={team} />
-        </div>
-      ) : null}
     </Card>
   );
 }

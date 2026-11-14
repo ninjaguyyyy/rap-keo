@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition } from "react";
 import { ExternalLinkIcon, PhoneIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOCK_REPORTED_MATCH_IDS_KEY } from "@/features/matches/mock-open-data";
+import { submitPublicMatchFlowAction } from "@/features/matches/public-match-flow-actions";
 
 type MatchFlowState = "OPEN" | "CONTACTED" | "CONFIRMED" | "REPORTED";
 
@@ -17,37 +18,11 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
   const hasPhone = Boolean(phone.trim());
   const hasFbLink = Boolean(fbLink.trim());
   const [flowState, setFlowState] = useState<MatchFlowState>("OPEN");
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const hasContacted = flowState !== "OPEN";
   const isFinal = flowState === "CONFIRMED" || flowState === "REPORTED";
-
-  const statusLabel = useMemo(() => {
-    if (flowState === "OPEN") return "Open";
-    if (flowState === "CONTACTED") return "Contacted";
-    if (flowState === "CONFIRMED") return "Confirmed";
-    return "Reported";
-  }, [flowState]);
-
-  const statusMeta = useMemo(() => {
-    if (flowState === "OPEN") {
-      return {
-        className: "bg-brand text-white",
-      };
-    }
-    if (flowState === "CONTACTED") {
-      return {
-        className: "bg-brand text-white",
-      };
-    }
-    if (flowState === "CONFIRMED") {
-      return {
-        className: "bg-type-field text-white",
-      };
-    }
-    return {
-      className: "bg-type-opponent text-white",
-    };
-  }, [flowState]);
 
   function handleContactClick() {
     if (flowState === "OPEN") {
@@ -55,13 +30,7 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
     }
   }
 
-  function handleConfirm() {
-    if (!hasContacted || isFinal) return;
-    setFlowState("CONFIRMED");
-  }
-
-  function handleReport() {
-    if (!hasContacted || isFinal) return;
+  function persistReportedMatchId() {
     try {
       const raw = window.localStorage.getItem(MOCK_REPORTED_MATCH_IDS_KEY);
       const parsed = raw ? (JSON.parse(raw) as unknown) : [];
@@ -77,7 +46,35 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
     } catch {
       // no-op for mock flow persistence
     }
-    setFlowState("REPORTED");
+  }
+
+  function handleConfirm() {
+    if (!hasContacted || isFinal || pending) return;
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await submitPublicMatchFlowAction(matchId, "CONFIRM");
+      if (!result.ok) {
+        setFeedback(result.error ?? "Không xử lý được thao tác. Vui lòng thử lại.");
+        return;
+      }
+      setFlowState("CONFIRMED");
+      setFeedback(result.message ?? "Đã xử lý yêu cầu.");
+    });
+  }
+
+  function handleReport() {
+    if (!hasContacted || isFinal || pending) return;
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await submitPublicMatchFlowAction(matchId, "REPORT");
+      if (!result.ok) {
+        setFeedback(result.error ?? "Không xử lý được thao tác. Vui lòng thử lại.");
+        return;
+      }
+      persistReportedMatchId();
+      setFlowState("REPORTED");
+      setFeedback(result.message ?? "Đã xử lý yêu cầu.");
+    });
   }
 
   return (
@@ -91,7 +88,7 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
         >
           <ExternalLinkIcon className="size-3.5" />
           <span>Link bài đăng FB</span>
-          <span className="inline-flex items-center justify-center rounded-full bg-brand px-1.5 py-[3px] text-[9px] font-bold leading-none text-white">
+          <span className="inline-flex items-center justify-center rounded-full bg-brand px-1.5 py-0.75 text-[9px] font-bold leading-none text-white">
             Open
           </span>
         </a>
@@ -123,10 +120,10 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={!hasContacted || isFinal}
+          disabled={!hasContacted || isFinal || pending}
           className={cn(
             "inline-flex h-9 w-full items-center justify-center rounded-full px-4 text-center text-[13px] leading-none font-medium transition-colors",
-            !hasContacted || isFinal
+            !hasContacted || isFinal || pending
               ? "cursor-not-allowed bg-brand/35 text-white/90"
               : "bg-brand text-white hover:bg-brand-hover",
           )}
@@ -137,17 +134,21 @@ export function MockMatchFlowActions({ matchId, phone, fbLink }: MockMatchFlowAc
         <button
           type="button"
           onClick={handleReport}
-          disabled={!hasContacted || isFinal}
+          disabled={!hasContacted || isFinal || pending}
           className={cn(
             "inline-flex h-9 w-full items-center justify-center rounded-full border bg-surface px-4 text-center text-[13px] leading-none font-medium transition-colors",
-            !hasContacted || isFinal
+            !hasContacted || isFinal || pending
               ? "cursor-not-allowed border-brand/40 text-brand/55"
               : "border-brand text-brand hover:bg-brand-soft/45",
           )}
         >
-          Report đối đã có kèo
+          Report đội đã có kèo
         </button>
       </div>
+
+      {feedback ? (
+        <p className="text-center text-[11px] font-medium text-ink-muted">{feedback}</p>
+      ) : null}
     </div>
   );
 }

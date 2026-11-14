@@ -208,6 +208,8 @@ model Team {
   name      String
   ownerId   String    @map("owner_id") @db.Uuid
   skillTier SkillTier @map("skill_tier")
+  // Màu chủ đạo của đội (chọn từ danh sách preset để giữ contrast chữ trắng).
+  primaryColor String  @default("PURPLE_STORM") @map("primary_color")
   homeArea  String?   @map("home_area")
   // geography(Point, 4326) — gán/đọc qua raw SQL
   location  Unsupported("geography(Point, 4326)")?

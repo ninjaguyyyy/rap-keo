@@ -4,11 +4,15 @@ import { ListIcon } from "lucide-react";
 import { ScrollToTopOnMount } from "@/components/layout/scroll-to-top-on-mount";
 import { MockMatchFlowActions } from "@/features/matches/components/mock-match-flow-actions";
 
+type PublicDetailMatchType = "FIND_OPPONENT" | "NEED_PLAYERS" | "INTERNAL";
+
 type PublicMatchDetailViewProps = Readonly<{
   matchId: string;
   homeTeam: string;
   awayTeam: string;
   kickoff: string;
+  matchType?: PublicDetailMatchType;
+  neededPlayers?: number | null;
   dayLabel?: string;
   fieldTypeLabel: string;
   district: string;
@@ -23,6 +27,8 @@ export function PublicMatchDetailView({
   homeTeam,
   awayTeam,
   kickoff,
+  matchType,
+  neededPlayers,
   dayLabel = "",
   fieldTypeLabel,
   district,
@@ -31,6 +37,13 @@ export function PublicMatchDetailView({
   fbLink,
   backHref = "/matches",
 }: PublicMatchDetailViewProps) {
+  const isRecruitingMatch = matchType === "NEED_PLAYERS" || matchType === "INTERNAL";
+  const hasNeededPlayersCount = typeof neededPlayers === "number" && neededPlayers > 0;
+  let neededPlayersLabel: string | null = null;
+  if (isRecruitingMatch) {
+    neededPlayersLabel = hasNeededPlayersCount ? `Tuyển ${neededPlayers} cầu` : "Tuyển cầu";
+  }
+
   return (
     <div className="min-h-dvh bg-surface-muted px-2 pb-3 pt-8">
       <ScrollToTopOnMount />
@@ -48,6 +61,9 @@ export function PublicMatchDetailView({
               <span className="font-heading text-[32px] leading-none font-bold tracking-tight text-brand">
                 {kickoff}
               </span>
+              {neededPlayersLabel ? (
+                <p className="mt-1 text-[11px] font-semibold leading-none text-ink-muted">{neededPlayersLabel}</p>
+              ) : null}
             </div>
             <TeamBadge name={awayTeam} align="end" />
           </div>

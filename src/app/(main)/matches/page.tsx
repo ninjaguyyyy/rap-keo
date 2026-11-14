@@ -256,10 +256,11 @@ export default async function MatchesPage({
           className="rounded-none border-x-0 shadow-none"
           activeTab={selectedTab}
           tabs={heroTabs}
+          isAuthed={Boolean(user)}
         />
       </div>
 
-      <div className="mt-4 -mx-4 flex flex-col gap-4">
+      <div className="mt-4 flex flex-col gap-4">
         <div id="match-filters">
           <MatchFilters dayOptions={dayOptions} selectedDayKey={selectedDayKey} />
         </div>

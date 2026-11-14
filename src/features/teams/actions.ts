@@ -23,7 +23,7 @@ import {
 } from "@/lib/supabase-storage";
 
 // Giới hạn upload ảnh đội (cover/logo): loại MIME + dung lượng tối đa (5MB).
-const TEAM_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const TEAM_IMAGE_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const TEAM_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 // Kết quả chung cho action đơn (deleteTeam) — mirror MatchActionState.
@@ -56,6 +56,7 @@ export async function createTeam(
   const parsed = createTeamSchema.safeParse({
     name: formData.get("name"),
     skillTier: formData.get("skillTier"),
+    primaryColor: formData.get("primaryColor"),
     homeArea: formData.get("homeArea"),
   });
 
@@ -63,7 +64,7 @@ export async function createTeam(
     return { fieldErrors: toFieldErrors(parsed.error.issues) };
   }
 
-  const { name, skillTier, homeArea } = parsed.data;
+  const { name, skillTier, primaryColor, homeArea } = parsed.data;
   // Blank homeArea -> null (không lưu chuỗi rỗng), giống pattern note trong createMatch.
   const homeAreaValue = homeArea || null;
 
@@ -72,7 +73,13 @@ export async function createTeam(
     // chèn member fail -> rollback cả team (không để đội "mồ côi" không có chủ).
     await db.$transaction(async (tx) => {
       const team = await tx.team.create({
-        data: { name, ownerId: user.id, skillTier, homeArea: homeAreaValue },
+        data: {
+          name,
+          ownerId: user.id,
+          skillTier,
+          primaryColor,
+          homeArea: homeAreaValue,
+        },
       });
       await tx.teamMember.create({
         data: { teamId: team.id, userId: user.id, role: TeamRole.OWNER },
@@ -92,11 +99,13 @@ export async function updateTeam(
   formData: FormData,
 ): Promise<TeamFormState> {
   const user = await requireUser();
-  const teamId = String(formData.get("id") ?? "");
+  const teamIdEntry = formData.get("id");
+  const teamId = typeof teamIdEntry === "string" ? teamIdEntry : "";
 
   const parsed = createTeamSchema.safeParse({
     name: formData.get("name"),
     skillTier: formData.get("skillTier"),
+    primaryColor: formData.get("primaryColor"),
     homeArea: formData.get("homeArea"),
   });
 
@@ -114,14 +123,14 @@ export async function updateTeam(
     return { error: "Bạn không có quyền sửa đội này." };
   }
 
-  const { name, skillTier, homeArea } = parsed.data;
+  const { name, skillTier, primaryColor, homeArea } = parsed.data;
 
   // Upload ảnh bìa (tùy chọn): chỉ xử lý khi user chọn file mới.
   // formData.get("cover") trả File (nếu có chọn) hoặc chuỗi rỗng (không chọn).
   const coverEntry = formData.get("cover");
   let coverUrl: string | undefined;
   if (coverEntry instanceof File && coverEntry.size > 0) {
-    if (!TEAM_IMAGE_ALLOWED_TYPES.includes(coverEntry.type)) {
+    if (!TEAM_IMAGE_ALLOWED_TYPES.has(coverEntry.type)) {
       return { error: "Chỉ nhận ảnh JPG, PNG hoặc WebP." };
     }
     if (coverEntry.size > TEAM_IMAGE_MAX_BYTES) {
@@ -146,6 +155,7 @@ export async function updateTeam(
       data: {
         name,
         skillTier,
+        primaryColor,
         homeArea: homeArea || null,
         ...(coverUrl ? { coverUrl } : {}),
       },
@@ -187,7 +197,7 @@ export async function updateTeamLogo(
   if (!(logoEntry instanceof File) || logoEntry.size === 0) {
     return { error: "Vui lòng chọn ảnh avatar đội." };
   }
-  if (!TEAM_IMAGE_ALLOWED_TYPES.includes(logoEntry.type)) {
+  if (!TEAM_IMAGE_ALLOWED_TYPES.has(logoEntry.type)) {
     return { error: "Chỉ nhận ảnh JPG, PNG hoặc WebP." };
   }
   if (logoEntry.size > TEAM_IMAGE_MAX_BYTES) {

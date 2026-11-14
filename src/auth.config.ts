@@ -5,14 +5,13 @@ import type { NextAuthConfig } from "next-auth";
 // Các tiền tố route yêu cầu đăng nhập.
 // Lưu ý: /matches (danh sách kèo) + /tournaments (danh sách giải) là public —
 // vào home thấy list luôn, không cần đăng nhập. Tạo giải/kèo qua server action
-// `requireUser()` lo auth. /my-tournaments + /my-matches + /teams cần đăng nhập.
+// `requireUser()` lo auth. /my-tournaments + /teams cần đăng nhập.
 const PROTECTED_PREFIXES = [
   "/teams",
   "/fields",
   "/notifications",
   "/profile",
   "/my-tournaments",
-  "/my-matches",
 ];
 
 export const authConfig = {

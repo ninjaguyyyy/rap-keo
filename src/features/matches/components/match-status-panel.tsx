@@ -1,7 +1,7 @@
 "use client";
 
 // MatchStatusPanel — phần status rows + action của một kèo do user tạo.
-// Dùng chung giữa MyMatchCard (trang /my-matches) và MyMatchFab popover (/matches)
+// Dùng cho MyMatchFab popover (/matches) để hiển thị trạng thái + action.
 // để không lặp logic accept/reject + 3 nhánh trạng thái.
 //
 // Nhánh hiển thị theo trạng thái nghiệp vụ:
