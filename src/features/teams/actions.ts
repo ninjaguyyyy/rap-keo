@@ -9,7 +9,9 @@ import {
   addMemberSchema,
   updateTeamMemberSchema,
   createTeamMatchSchema,
+  updateTeamSocialLinksSchema,
   type TeamFormState,
+  type TeamSocialLinksState,
   type AddMemberState,
   type UpdateTeamMemberState,
   type CreateTeamMatchState,
@@ -167,6 +169,55 @@ export async function updateTeam(
   } catch (err) {
     console.error("updateTeam error:", err);
     return { error: "Không cập nhật được đội. Thử lại nhé." };
+  }
+}
+
+// Cập nhật link social của đội từ card "Mạng xã hội CLB" trên trang chi tiết.
+// Chỉ chủ đội mới được sửa.
+export async function updateTeamSocialLinks(
+  _prev: TeamSocialLinksState,
+  formData: FormData,
+): Promise<TeamSocialLinksState> {
+  const user = await requireUser();
+
+  const parsed = updateTeamSocialLinksSchema.safeParse({
+    id: formData.get("id"),
+    facebookUrl: formData.get("facebookUrl"),
+    tiktokUrl: formData.get("tiktokUrl"),
+  });
+  if (!parsed.success) {
+    const fieldErrors: NonNullable<TeamSocialLinksState["fieldErrors"]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if ((key === "facebookUrl" || key === "tiktokUrl") && !fieldErrors[key]) {
+        fieldErrors[key] = issue.message;
+      }
+    }
+    return { fieldErrors };
+  }
+
+  const existing = await db.team.findUnique({
+    where: { id: parsed.data.id },
+    select: { ownerId: true },
+  });
+  if (!existing) return { error: "Đội không tồn tại." };
+  if (existing.ownerId !== user.id) {
+    return { error: "Bạn không có quyền sửa đội này." };
+  }
+
+  try {
+    await db.team.update({
+      where: { id: parsed.data.id },
+      data: {
+        facebookUrl: parsed.data.facebookUrl ?? null,
+        tiktokUrl: parsed.data.tiktokUrl ?? null,
+      },
+    });
+    revalidatePath(`/teams/${parsed.data.id}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("updateTeamSocialLinks error:", err);
+    return { error: "Không cập nhật được link mạng xã hội. Thử lại nhé." };
   }
 }
 

@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { getTeamById } from "@/features/teams/queries";
 import { TeamAvatar } from "@/features/teams/components/team-avatar";
 import { EditTeamAvatarDialog } from "@/features/teams/components/edit-team-avatar-dialog";
-import { MapPinIcon } from "@/features/matches/components/card-shared";
 import { teamSkillTierLabels } from "@/features/teams/labels";
+import { resolveTeamPrimaryColorHex } from "@/features/teams/colors";
 
 // Layout riêng cho trang chi tiết đội /teams/[id] (route group (team) không ảnh
 // hưởng URL). Bỏ hero banner của (main), tự render header = ảnh bìa đội + crest +
@@ -33,88 +32,68 @@ export default async function TeamLayout({
     notFound();
   }
   const canManage = team.ownerId === user.id;
+  const primaryColorHex = resolveTeamPrimaryColorHex(team.primaryColor);
 
   return (
     <div className="min-h-dvh bg-surface-muted">
-      {/* Header = ảnh bìa đội full-bleed + scrim + hex overlay + crest/tên/khu vực. */}
-      <header className="relative w-full overflow-hidden">
-        {/* Ảnh bìa đội. coverUrl = ảnh upload (Supabase Storage), fallback mặc định. */}
-        <Image
-          src={team.coverUrl ?? "/team_detail_bg.webp"}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-        {/* Scrim gradient xanh spotlight (tối dần xuống đáy) để chữ trắng đọc rõ. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-spotlight/45 via-brand-spotlight/75 to-brand-spotlight/95" />
-        {/* Họa tiết lục giác mờ. */}
-        <div className="hex-bg absolute inset-0" aria-hidden="true" />
-
-        {/* Nội dung header (relative nổi trên ảnh/scrim), giới hạn max-w-md căn giữa. */}
-        <div className="relative mx-auto w-full max-w-md">
-          {/* Nút back tròn góc trên-trái. */}
-          <div className="px-4 pt-4">
-            <Link
-              href="/teams"
-              aria-label="Quay lại danh sách đội"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/25"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </Link>
+      <header className="px-2 pb-3 pt-3">
+        {/* Hero banner theo style team card: nền màu chủ đạo + pattern, logo/tên/meta. */}
+        <div className="relative overflow-hidden rounded-2xl">
+          <div className="absolute inset-0" aria-hidden="true">
+            <div
+              className="h-full w-full bg-[url('/scoreboard-header-light.svg')] bg-cover bg-center"
+              style={{ backgroundColor: primaryColorHex }}
+            />
           </div>
+          <div className="absolute inset-0 bg-black/12" aria-hidden="true" />
 
-          {/* Crest + tên + khu vực, canh giữa. Chừa pb lớn hơn để body nhô đè lên. */}
-          <div className="flex flex-col items-center gap-2 px-4 pb-10 pt-2 text-center">
-            {/* Crest đội: ưu tiên logo upload, fallback chữ cái đầu.
-                Viền trắng + shadow cho nổi trên nền ảnh bìa. */}
-            <div className="relative">
-              <TeamAvatar
-                name={team.name}
-                imageUrl={team.logoUrl}
-                size="lg"
-                className="h-24 w-24 text-4xl shadow-xl ring-4 ring-white/80"
-              />
-              {canManage ? <EditTeamAvatarDialog teamId={team.id} /> : null}
+          <div className="relative flex h-[160px] flex-col p-5 text-white">
+            <div className="flex items-start gap-3">
+              <div className="relative -mt-1">
+                <TeamAvatar
+                  name={team.name}
+                  imageUrl={team.logoUrl}
+                  size="lg"
+                  className="h-16 w-16 rounded-full! border border-white/35 bg-white/10 p-1.5 shadow-sm"
+                />
+                {canManage ? <EditTeamAvatarDialog teamId={team.id} /> : null}
+              </div>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-white drop-shadow">
-              {team.name}
-            </h1>
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm font-medium text-white/90">
-              <span className="inline-flex items-center gap-1">
-                {teamSkillTierLabels[team.skillTier]}
-              </span>
-              {team.homeArea ? (
-                <>
-                  <span aria-hidden="true" className="text-white/50">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <MapPinIcon />
-                    {team.homeArea}
-                  </span>
-                </>
-              ) : null}
+
+            <div className="mt-3 min-w-0">
+              <h1 className="truncate text-[24px] leading-[1.05] font-black tracking-[-0.02em] text-white drop-shadow-[0_2px_10px_rgba(24,0,30,0.35)]">
+                {team.name}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] leading-6 text-white/92">
+                <span className="inline-flex items-center gap-1.5">
+                  <Image
+                    src="/stadium.svg"
+                    alt=""
+                    width={22}
+                    height={22}
+                    className="opacity-95 invert"
+                  />
+                  {team.homeArea ?? "Chưa cập nhật khu vực"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Image
+                    src="/soccer-ball-variant.png"
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="opacity-95 brightness-0 invert"
+                  />
+                  {teamSkillTierLabels[team.skillTier]}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Nội dung page: card nhô lên đè header (-mt-4 rounded-t-3xl) — consistent
-          với layout (main). Các tabs render trong khung max-w-md căn giữa. */}
-      <main className="relative z-10 -mt-4 rounded-t-3xl bg-surface-muted px-4 py-4 sm:px-4">
-        <div className="mx-auto w-full max-w-none sm:max-w-md">{children}</div>
+      {/* Tab/menu nằm dưới hero banner theo mockup. */}
+      <main className="px-2 pb-6">
+        <div className="w-full">{children}</div>
       </main>
     </div>
   );

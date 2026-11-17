@@ -37,7 +37,7 @@ const teamMatchInclude = {
   field: { select: { id: true, name: true, address: true } },
   requests: {
     where: { status: "ACCEPTED" },
-    select: { requesterTeam: { select: { id: true, name: true } } },
+    select: { requesterTeam: { select: { id: true, name: true, logoUrl: true } } },
     take: 1,
   },
 } as const;

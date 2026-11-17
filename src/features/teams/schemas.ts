@@ -47,6 +47,29 @@ export type TeamFormState = {
   fieldErrors?: Partial<Record<keyof CreateTeamInput, string>>;
 };
 
+const socialUrlSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  },
+  z.string().url("Link không hợp lệ").optional(),
+);
+
+export const updateTeamSocialLinksSchema = z.object({
+  id: z.string().uuid(),
+  facebookUrl: socialUrlSchema,
+  tiktokUrl: socialUrlSchema,
+});
+
+export type UpdateTeamSocialLinksInput = z.infer<typeof updateTeamSocialLinksSchema>;
+
+export type TeamSocialLinksState = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<"facebookUrl" | "tiktokUrl", string>>;
+};
+
 const memberNameSchema = z
   .string()
   .trim()

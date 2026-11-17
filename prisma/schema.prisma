@@ -216,6 +216,9 @@ model Team {
   logoUrl   String?   @map("logo_url")
   // Ảnh bìa đội (URL public từ Supabase Storage bucket team-assets). Nullable: mặc định.
   coverUrl  String?   @map("cover_url")
+  // Link mạng xã hội của đội (tuỳ chọn).
+  facebookUrl String? @map("facebook_url")
+  tiktokUrl   String? @map("tiktok_url")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
