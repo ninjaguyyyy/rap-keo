@@ -27,6 +27,7 @@ import type { ParseMatchTextState } from "../actions";
 import type { MatchSkillTier, MatchType, FieldType } from "@/generated/prisma/enums";
 import type { MatchDraft } from "../ai-parser";
 import { AreaCombobox } from "./area-combobox";
+import { PlaytimePicker } from "./playtime-picker";
 
 // TimeSlot = keyof TIME_SLOT_RANGES (queries.ts) — nhưng queries.ts là server-only,
 // nên định nghĩa type client-side khớp tuple (value là key cho URL/hidden input).
@@ -76,7 +77,15 @@ const TIME_SLOT_START: Record<TimeSlot, string> = {
   "2330": "23:30",
 };
 
-export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => void; isAdmin?: boolean }) {
+const TIME_SLOT_OPTIONS = TIME_SLOTS.map(([slot]) => ({
+  value: slot,
+  label: TIME_SLOT_START[slot],
+}));
+
+export function MatchForm({
+  onSuccess,
+  isAdmin = false,
+}: Readonly<{ onSuccess?: () => void; isAdmin?: boolean }>) {
   const [state, formAction, pending] = useActionState(
     createMatch,
     initialState,
@@ -128,7 +137,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
       const start = TIME_SLOT_START[slot]; // "HH:mm"
       return `${playDate}T${start}`;
     })
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
     if (state.ok) {
@@ -311,7 +320,8 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
       {/* Đã có sân chưa (radio 2 lựa chọn) — đặt sau Loại sân. */}
       <div className="flex flex-col gap-1.5">
         <Label>Đã có sân chưa?</Label>
-        <div className="flex gap-2" role="group" aria-label="Đã có sân chưa">
+        <fieldset className="flex gap-2">
+          <legend className="sr-only">Đã có sân chưa</legend>
           <button
             type="button"
             onClick={() => setHasField(true)}
@@ -345,7 +355,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
             </svg>
             Chưa có sân
           </button>
-        </div>
+        </fieldset>
         {/* Hidden input: "on" khi checked -> server parse hasField=true. */}
         <input type="hidden" name="hasField" value={hasField ? "on" : "off"} />
         {state.fieldErrors?.hasField ? (
@@ -358,11 +368,8 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
       {/* Trình độ — multi-select dạng chip toggle (mobile-friendly). */}
       <div className="flex flex-col gap-1.5">
         <Label>Trình độ</Label>
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Chọn trình độ"
-        >
+        <fieldset className="flex flex-wrap gap-1.5">
+          <legend className="sr-only">Chọn trình độ</legend>
           {SKILL_OPTIONS.map(([val, label]) => {
             const active = skillTiers.includes(val);
             return (
@@ -382,7 +389,7 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
               </button>
             );
           })}
-        </div>
+        </fieldset>
         {/* Hidden inputs: mỗi trình độ chọn -> 1 entry name="skillTiers" để
             server action nhận qua formData.getAll("skillTiers"). */}
         {skillTiers.map((val) => (
@@ -399,68 +406,24 @@ export function MatchForm({ onSuccess, isAdmin = false }: { onSuccess?: () => vo
         )}
       </div>
 
-      {/* Ngày đá + giờ đá (multi) */}
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="playDate">Ngày đá</Label>
-        <Input
-          id="playDate"
-          name="playDate"
-          type="date"
-          required
-          value={playDate}
-          min={todayStr()}
-          onChange={(e) => setPlayDate(e.target.value)}
-          className="h-11 text-base"
-        />
-        {state.fieldErrors?.playTimes ? (
-          <p className="text-sm text-destructive">
-            {state.fieldErrors.playTimes}
-          </p>
-        ) : null}
-      </div>
+      <PlaytimePicker
+        selectedDate={playDate}
+        onDateChange={setPlayDate}
+        timeOptions={TIME_SLOT_OPTIONS}
+        selectedTimes={timeSlots}
+        onToggleTime={(value) => toggleTimeSlot(value as TimeSlot)}
+        minDate={todayStr()}
+        dateLabel="Ngày đá"
+        timeLabel="Giờ đá"
+        timeHint="Chọn 1 hoặc nhiều khung giờ. Có thể chọn cả sáng và tối."
+        error={state.fieldErrors?.playTimes}
+      />
 
-      <div className="flex flex-col gap-1.5">
-        <Label>Giờ đá</Label>
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Chọn giờ đá"
-        >
-          {TIME_SLOTS.map(([val, label]) => {
-            const active = timeSlots.includes(val);
-            return (
-              <button
-                key={val}
-                type="button"
-                onClick={() => toggleTimeSlot(val)}
-                aria-pressed={active}
-                className={cn(
-                  "inline-flex h-9 items-center rounded-full border px-3 text-sm font-semibold transition-colors",
-                  active
-                    ? "border-brand bg-brand text-white"
-                    : "border-line bg-surface text-ink-muted hover:border-brand hover:text-brand",
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-        {/* Hidden inputs: mỗi combo ngày+slot -> 1 entry name="playTimes"
-            dạng "YYYY-MM-DDTHH:mm" để server action nhận qua formData.getAll. */}
-        {playTimes.map((pt) => (
-          <input key={pt} type="hidden" name="playTimes" value={pt} />
-        ))}
-        {state.fieldErrors?.playTimes ? (
-          <p className="text-sm text-destructive">
-            {state.fieldErrors.playTimes}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Chọn 1 hoặc nhiều khung giờ. Có thể chọn cả sáng và tối.
-          </p>
-        )}
-      </div>
+      {/* Hidden inputs: mỗi combo ngày+slot -> 1 entry name="playTimes"
+          dạng "YYYY-MM-DDTHH:mm" để server action nhận qua formData.getAll. */}
+      {playTimes.map((pt) => (
+        <input key={pt} type="hidden" name="playTimes" value={pt} />
+      ))}
 
       {/* Sân — combobox: gợi ý 4 sân + cho nhập text tự do. Controlled để
           AI parser set được (map key->label khi apply draft). */}

@@ -1,0 +1,3 @@
+#!/bin/sh
+export AIDLC_ENGINE_LAUNCHER="$0"
+exec aidlc engine "$@"

@@ -25,8 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { fieldTypeLabels } from "@/features/matches/labels";
+import { fieldTypeLabels, timeSlotLabels } from "@/features/matches/labels";
 import { AreaCombobox } from "@/features/matches/components/area-combobox";
+import { PlaytimePicker } from "@/features/matches/components/playtime-picker";
 import { createTeamMatch } from "../actions";
 import type { CreateTeamMatchState } from "../schemas";
 import type { FieldType } from "@/generated/prisma/enums";
@@ -43,8 +44,12 @@ function todayStr(): string {
 }
 
 const FIELD_OPTIONS = Object.entries(fieldTypeLabels) as [FieldType, string][];
+const TEAM_TIME_OPTIONS = Object.keys(timeSlotLabels).map((slot) => ({
+  value: `${slot.slice(0, 2)}:${slot.slice(2)}`,
+  label: `${slot.slice(0, 2)}:${slot.slice(2)}`,
+}));
 
-export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
+export function CreateTeamMatchDialog({ teamId }: Readonly<{ teamId: string }>) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     createTeamMatch,
@@ -111,18 +116,15 @@ export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
           {/* Loại trận: Đá kèo / Đá nội bộ. */}
           <div className="flex flex-col gap-1.5">
             <Label>Loại trận</Label>
-            <div
-              role="group"
-              aria-label="Loại trận"
-              className="grid grid-cols-2 gap-1 rounded-lg bg-surface-muted p-1"
-            >
+            <fieldset className="grid grid-cols-2 gap-1 rounded-lg bg-surface-muted p-1">
+              <legend className="sr-only">Loại trận</legend>
               <ToggleButton active={kind === "opponent"} onClick={() => setKind("opponent")}>
                 Đá kèo
               </ToggleButton>
               <ToggleButton active={kind === "internal"} onClick={() => setKind("internal")}>
                 Đá nội bộ
               </ToggleButton>
-            </div>
+            </fieldset>
           </div>
 
           {/* Tên đối thủ / 2 bên nội bộ theo kind. */}
@@ -223,38 +225,17 @@ export function CreateTeamMatchDialog({ teamId }: { teamId: string }) {
             ) : null}
           </div>
 
-          {/* Ngày + giờ đá. */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="play-date">Ngày đá</Label>
-              <Input
-                id="play-date"
-                name="playDate"
-                type="date"
-                required
-                value={playDate}
-                onChange={(e) => setPlayDate(e.target.value)}
-                className="h-11 text-base"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="play-hour">Giờ đá</Label>
-              <Input
-                id="play-hour"
-                name="playHour"
-                type="time"
-                required
-                value={playHour}
-                onChange={(e) => setPlayHour(e.target.value)}
-                className="h-11 text-base"
-              />
-            </div>
-          </div>
-          {state.fieldErrors?.playTime ? (
-            <p className="text-sm text-destructive">
-              {state.fieldErrors.playTime}
-            </p>
-          ) : null}
+          <PlaytimePicker
+            selectedDate={playDate}
+            onDateChange={setPlayDate}
+            timeOptions={TEAM_TIME_OPTIONS}
+            selectedTimes={[playHour]}
+            onToggleTime={(value) => setPlayHour(value)}
+            dateLabel="Ngày đá"
+            timeLabel="Giờ đá"
+            timeHint="Chọn 1 khung giờ bắt đầu cho trận đấu."
+            error={state.fieldErrors?.playTime}
+          />
 
           {state.error ? (
             <p className="text-sm text-destructive">{state.error}</p>
@@ -277,11 +258,11 @@ function ToggleButton({
   active,
   onClick,
   children,
-}: {
+}: Readonly<{
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <button
       type="button"
